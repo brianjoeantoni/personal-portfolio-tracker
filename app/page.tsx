@@ -71,6 +71,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { usePathname, useRouter } from 'next/navigation';
 
 type AssetType = 'stock' | 'gold' | 'cash' | 'custom';
 type Currency = 'IDR' | 'USD';
@@ -645,7 +646,6 @@ function Dashboard() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [market, setMarket] = useState<MarketData>(emptyMarket);
   const [hydrated, setHydrated] = useState(false);
-  const [view, setView] = useState<'overview' | 'assets'>('overview');
   const [allocationView, setAllocationView] = useState<'asset' | 'category'>(
     'asset',
   );
@@ -654,6 +654,9 @@ function Dashboard() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [themeReady, setThemeReady] = useState(false);
   const assetsRef = useRef(assets);
+  const pathname = usePathname();
+  const router = useRouter();
+  const view = pathname === '/assets' ? 'assets' : 'overview';
   useEffect(() => {
     try {
       setAssets(JSON.parse(localStorage.getItem(ASSET_KEY) || '[]'));
@@ -870,7 +873,12 @@ function Dashboard() {
   ];
   return (
     <SidebarProvider>
-      <AppSidebar activeView={view} onNavigate={setView} />
+      <AppSidebar
+        activeView={view}
+        onNavigate={(nextView) =>
+          router.push(nextView === 'assets' ? '/assets' : '/')
+        }
+      />
       <SidebarInset>
         <main className="dashboard-main min-h-screen bg-[#f5f7f3] text-[#1d2b24]">
           <div className="dashboard-header flex h-16 shrink-0 items-center gap-2 border-b border-[#dce5de] bg-white px-4">
