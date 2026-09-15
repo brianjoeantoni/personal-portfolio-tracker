@@ -137,6 +137,10 @@ body {
 }
 
 @layer base {
+  [data-slot='select-trigger'] {
+    cursor: pointer;
+  }
+
   input[type='number'] {
     appearance: textfield;
   }

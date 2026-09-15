@@ -29,13 +29,13 @@ export function AppSidebar({ activeView, onNavigate, ...props }: React.Component
           <SidebarGroupLabel>Portfolio</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Overview" isActive={activeView === 'overview'} onClick={() => onNavigate('overview')}>
+              <SidebarMenuButton className="cursor-pointer" tooltip="Overview" isActive={activeView === 'overview'} onClick={() => onNavigate('overview')}>
                 <LayoutDashboardIcon />
                 <span>Overview</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Assets" isActive={activeView === 'assets'} onClick={() => onNavigate('assets')}>
+              <SidebarMenuButton className="cursor-pointer" tooltip="Assets" isActive={activeView === 'assets'} onClick={() => onNavigate('assets')}>
                 <WalletCardsIcon />
                 <span>Assets</span>
               </SidebarMenuButton>

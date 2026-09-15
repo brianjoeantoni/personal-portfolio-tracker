@@ -75,6 +75,18 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 
 type AssetType = 'stock' | 'gold' | 'cash' | 'custom';
+
+const assetTypeLabels: Record<AssetType, string> = {
+  stock: 'Stock / ETF',
+  gold: 'Gold',
+  cash: 'Cash / bank balance',
+  custom: 'Custom asset',
+};
+
+const allocationViewLabels = {
+  asset: 'Asset',
+  category: 'Category',
+} as const;
 type Currency = 'IDR' | 'USD';
 type Asset = {
   id: string;
@@ -380,13 +392,16 @@ function AssetForm({
           onValueChange={(value) => setType(value as AssetType)}
         >
           <SelectTrigger id="asset-type">
-            <SelectValue />
+            <SelectValue>
+              {(value) => assetTypeLabels[value as AssetType]}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent
             side="bottom"
             sideOffset={6}
             align="start"
             alignItemWithTrigger={false}
+            className="w-56"
           >
             <SelectItem value="stock">Stock / ETF</SelectItem>
             <SelectItem value="gold">Gold</SelectItem>
@@ -1060,7 +1075,13 @@ function Dashboard() {
                                 id="allocation-filter"
                                 className="h-8 bg-[#eff3ed] text-xs dark:bg-[#273a2f]"
                               >
-                                <SelectValue />
+                                <SelectValue>
+                                  {(value) =>
+                                    allocationViewLabels[
+                                      value as 'asset' | 'category'
+                                    ]
+                                  }
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent
                                 side="bottom"
