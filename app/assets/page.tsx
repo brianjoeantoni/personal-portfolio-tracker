@@ -1,5 +1,5 @@
-import Home from '../page';
+import AssetsPage from './components/assets-page';
 
-export default function AssetsPage() {
-  return <Home />;
+export default function AssetsRoute() {
+  return <AssetsPage />;
 }
