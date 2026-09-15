@@ -652,11 +652,16 @@ function Dashboard() {
   );
   const [editing, setEditing] = useState<Asset | undefined>();
   const [formOpen, setFormOpen] = useState(false);
+  const [themeMounted, setThemeMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const assetsRef = useRef(assets);
   const pathname = usePathname();
   const router = useRouter();
   const view = pathname === '/assets' ? 'assets' : 'overview';
+  const activeTheme = themeMounted ? resolvedTheme : undefined;
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
   useEffect(() => {
     try {
       setAssets(JSON.parse(localStorage.getItem(ASSET_KEY) || '[]'));
@@ -884,11 +889,11 @@ function Dashboard() {
               variant="ghost"
               size="icon-sm"
               className="ml-auto"
-              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
-              title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              aria-label={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}
+              onClick={() => setTheme(activeTheme === 'dark' ? 'light' : 'dark')}
             >
-              {resolvedTheme === 'dark' ? <Sun /> : <Moon />}
+              {activeTheme === 'dark' ? <Sun /> : <Moon />}
             </Button>
           </div>
           <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
