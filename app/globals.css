@@ -141,6 +141,10 @@ body {
     cursor: pointer;
   }
 
+  [data-slot='select-item'] {
+    cursor: pointer;
+  }
+
   input[type='number'] {
     appearance: textfield;
   }
