@@ -24,6 +24,7 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -651,8 +652,7 @@ function Dashboard() {
   );
   const [editing, setEditing] = useState<Asset | undefined>();
   const [formOpen, setFormOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [themeReady, setThemeReady] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
   const assetsRef = useRef(assets);
   const pathname = usePathname();
   const router = useRouter();
@@ -669,22 +669,6 @@ function Dashboard() {
       setHydrated(true);
     }
   }, []);
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('net-worth-theme');
-    setTheme(
-      savedTheme === 'dark' ||
-        (savedTheme !== 'light' &&
-          window.matchMedia('(prefers-color-scheme: dark)').matches)
-        ? 'dark'
-        : 'light',
-    );
-    setThemeReady(true);
-  }, []);
-  useEffect(() => {
-    if (!themeReady) return;
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('net-worth-theme', theme);
-  }, [theme, themeReady]);
   useEffect(() => {
     assetsRef.current = assets;
   }, [assets]);
@@ -900,11 +884,11 @@ function Dashboard() {
               variant="ghost"
               size="icon-sm"
               className="ml-auto"
-              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')}
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             >
-              {theme === 'light' ? <Moon /> : <Sun />}
+              {resolvedTheme === 'dark' ? <Sun /> : <Moon />}
             </Button>
           </div>
           <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
