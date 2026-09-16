@@ -75,6 +75,14 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
+import {
+  convertFromIdr,
+  formatCurrency,
+  isCurrency,
+  reportingCurrencies,
+  reportingCurrencyLabel,
+  type Currency,
+} from "@/app/lib/currency";
 
 type AssetType = "stock" | "gold" | "cash" | "custom";
 
@@ -89,7 +97,6 @@ const allocationViewLabels = {
   asset: "Asset",
   category: "Category",
 } as const;
-type Currency = "IDR" | "USD";
 type Asset = {
   id: string;
   type: AssetType;
@@ -198,18 +205,10 @@ function parsePortfolioBackup(value: unknown): PortfolioBackup {
 }
 
 function formatIDR(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value || 0);
+  return formatCurrency(value, "IDR");
 }
 function formatMoney(value: number, currency: Currency) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: currency === "IDR" ? 0 : 2,
-  }).format(value || 0);
+  return formatCurrency(value, currency);
 }
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(
@@ -334,6 +333,20 @@ function assetValue(asset: Asset, market: MarketData) {
   return asset.type === "gold" || quote.currency === "IDR"
     ? quantity * quote.price
     : quantity * quote.price * (market.usdIdr?.price ?? 0);
+}
+function formatReportingValue(
+  value: number,
+  reportingCurrency: Currency,
+  market: MarketData,
+) {
+  const convertedValue = convertFromIdr(
+    value,
+    reportingCurrency,
+    market.usdIdr ? { USD: market.usdIdr.price } : {},
+  );
+  return convertedValue === undefined
+    ? `${reportingCurrency} rate unavailable`
+    : formatCurrency(convertedValue, reportingCurrency);
 }
 function AssetIcon({ type }: { type: AssetType }) {
   const props = { size: 17, strokeWidth: 1.8 };
@@ -582,6 +595,7 @@ function AssetTable({
   rows,
   total,
   market,
+  reportingCurrency,
   onEdit,
   onDelete,
   compact = false,
@@ -589,6 +603,7 @@ function AssetTable({
   rows: { asset: Asset; value: number }[];
   total: number;
   market: MarketData;
+  reportingCurrency: Currency;
   onEdit: (asset: Asset) => void;
   onDelete: (id: string) => void;
   compact?: boolean;
@@ -604,7 +619,7 @@ function AssetTable({
             <p className="mt-1 text-sm text-[#718174]">
               {compact
                 ? "A snapshot of what you own"
-                : "Values are reported in IDR"}
+                : `Values are reported in ${reportingCurrency}`}
             </p>
           </div>
           {compact && <ArrowUpRight className="text-[#678072]" size={18} />}
@@ -649,7 +664,9 @@ function AssetTable({
                 </div>
                 <div className="text-right">
                   <p className="font-semibold tracking-tight">
-                    {value ? formatIDR(value) : "—"}
+                    {value
+                      ? formatReportingValue(value, reportingCurrency, market)
+                      : "—"}
                   </p>
                   <p className="mt-0.5 text-xs text-[#718174]">
                     {value && total
@@ -742,7 +759,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
   }, []);
   useEffect(() => {
     const savedCurrency = localStorage.getItem(REPORTING_CURRENCY_KEY);
-    if (savedCurrency === "IDR" || savedCurrency === "USD") {
+    if (isCurrency(savedCurrency)) {
       setReportingCurrency(savedCurrency);
     }
     setReportingCurrencyReady(true);
@@ -960,11 +977,6 @@ export function Dashboard({ view }: { view: DashboardView }) {
     .filter((item) => item.value > 0);
   const chartData =
     allocationView === "asset" ? assetChartData : categoryChartData;
-  const formatReportingValue = (value: number) => {
-    if (reportingCurrency === "IDR") return formatIDR(value);
-    if (!market.usdIdr) return "USD rate unavailable";
-    return formatMoney(value / market.usdIdr.price, "USD");
-  };
   const summary = [
     {
       label: "Invested assets",
@@ -1135,7 +1147,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                         Reporting currency
                       </Label>
                       <p className="mt-1 text-sm text-[#718174]">
-                        Used for allocation values and price tooltips.
+                        Used for all dashboard values and price tooltips.
                       </p>
                     </div>
                     <Select
@@ -1156,8 +1168,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
                         align="start"
                         alignItemWithTrigger={false}
                       >
-                        <SelectItem value="IDR">IDR</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
+                        {reportingCurrencies.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.code}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1174,7 +1189,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   </h2>
                   <p className="mt-2 max-w-sm text-[15px] leading-6 text-[#678072]">
                     Add the assets you own and we’ll convert their current value
-                    to Indonesian rupiah.
+                    to {reportingCurrencyLabel(reportingCurrency)}.
                   </p>
                   <Button
                     className="mt-7 bg-[#283f34] text-white hover:bg-[#1e3028]"
@@ -1190,10 +1205,10 @@ export function Dashboard({ view }: { view: DashboardView }) {
               </Card>
             ) : view === "assets" ? (
               <AssetTable
-              compact
                 rows={assetRows}
                 total={total}
                 market={market}
+                reportingCurrency={reportingCurrency}
                 onEdit={openEdit}
                 onDelete={deleteAsset}
               />
@@ -1206,7 +1221,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
                         Total net worth
                       </p>
                       <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
-                        {formatIDR(total)}
+                        {formatReportingValue(
+                          total,
+                          reportingCurrency,
+                          market,
+                        )}
                       </p>
                       <p className="mt-3 text-sm text-[#d1ddc8]">
                         {market.usdIdr
@@ -1242,7 +1261,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
                         <div>
                           <p className="text-sm text-[#718174]">{item.label}</p>
                           <p className="mt-1 font-semibold tracking-tight">
-                            {formatIDR(item.value)}
+                            {formatReportingValue(
+                              item.value,
+                              reportingCurrency,
+                              market,
+                            )}
                           </p>
                         </div>
                       </CardContent>
@@ -1254,6 +1277,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                     rows={assetRows.slice(0, 5)}
                     total={total}
                     market={market}
+                    reportingCurrency={reportingCurrency}
                     onEdit={openEdit}
                     onDelete={deleteAsset}
                     compact
@@ -1334,7 +1358,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
                                 </Pie>
                                 <Tooltip
                                   formatter={(value) =>
-                                    formatReportingValue(Number(value ?? 0))
+                                    formatReportingValue(
+                                      Number(value ?? 0),
+                                      reportingCurrency,
+                                      market,
+                                    )
                                   }
                                   wrapperStyle={{ zIndex: 20 }}
                                   contentStyle={{
