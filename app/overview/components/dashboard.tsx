@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -821,6 +822,114 @@ function AssetTable({
   );
 }
 
+function AssetRowsSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="divide-y divide-[#edf0ed]">
+      {Array.from({ length: count }, (_, index) => (
+        <div key={index} className="flex items-center gap-3 px-4 py-4 sm:px-6">
+          <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-4 w-40 max-w-[70%]" />
+            <Skeleton className="h-3 w-28 max-w-[50%]" />
+          </div>
+          <div className="space-y-2 text-right">
+            <Skeleton className="ml-auto h-4 w-24" />
+            <Skeleton className="ml-auto h-3 w-10" />
+          </div>
+          <Skeleton className="ml-1 h-8 w-8 shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DashboardSkeleton({ view }: { view: DashboardView }) {
+  if (view === "settings") {
+    return (
+      <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
+        <CardContent className="p-0">
+          <div className="flex items-center justify-between gap-6 px-6 py-5">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-72 max-w-[55vw]" />
+            </div>
+            <Skeleton className="h-9 w-24 shrink-0" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (view === "assets") {
+    return (
+      <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
+        <CardContent className="p-0">
+          <div className="space-y-2 px-6 py-5">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <AssetRowsSkeleton />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-3xl bg-[#283f34] px-6 py-7 shadow-[0_18px_45px_rgba(40,63,52,0.12)] sm:px-8 sm:py-9">
+        <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-28 bg-white/15" />
+            <Skeleton className="h-11 w-64 bg-white/15 sm:h-14" />
+            <Skeleton className="h-4 w-52 bg-white/15" />
+            <Skeleton className="h-4 w-36 bg-white/15" />
+          </div>
+          <Skeleton className="h-10 w-28 bg-white/15" />
+        </div>
+      </section>
+      <section className="grid gap-4 md:grid-cols-3">
+        {Array.from({ length: 3 }, (_, index) => (
+          <Card
+            key={index}
+            className="dashboard-card border-[#dce5de] bg-white shadow-none"
+          >
+            <CardContent className="flex items-center gap-4 p-5">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+        <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
+          <CardContent className="p-0">
+            <div className="space-y-2 px-6 py-5">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <AssetRowsSkeleton count={3} />
+          </CardContent>
+        </Card>
+        <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
+          <CardContent className="space-y-5 p-6">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mx-auto h-44 w-44 rounded-full" />
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-4/5" />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    </div>
+  );
+}
+
 type DashboardView = "overview" | "assets" | "settings";
 
 export function Dashboard({ view }: { view: DashboardView }) {
@@ -1213,12 +1322,14 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   />
                   {hasPrices
                     ? `${allStale ? "Using last known prices · " : "Market data · "}${timeLabel(updatedAt)}`
-                    : "Add an asset to load market data"}
+                    : hydrated
+                      ? "Add an asset to load market data"
+                      : "Loading saved portfolio…"}
                 </div>
                 <Button
                   variant="outline"
                   onClick={() => marketQuery.refetch()}
-                  disabled={assets.length === 0 || marketQuery.isFetching}
+                  disabled={!hydrated || assets.length === 0 || marketQuery.isFetching}
                   className="border-[#dce5de] bg-white"
                 >
                   <RefreshCw
@@ -1228,6 +1339,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 </Button>
                 <Button
                   onClick={openNew}
+                  disabled={!hydrated}
                   className="bg-[#283f34] text-white hover:bg-[#1e3028]"
                 >
                   <Plus />
@@ -1241,7 +1353,9 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 {importError}
               </p>
             )}
-            {view === "settings" ? (
+            {!hydrated ? (
+              <DashboardSkeleton view={view} />
+            ) : view === "settings" ? (
               <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between gap-6 px-6 py-5">
