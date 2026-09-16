@@ -127,7 +127,8 @@ portfolio after confirmation.
 
 Prices are informational and may be delayed, unavailable, or different from a
 broker's executable price. A failed refresh keeps the last available quote and
-marks it stale where applicable.
+marks it stale where applicable. Cached market data is reused for 15 minutes;
+the **Refresh prices** button always performs an immediate refresh.
 
 ## Currency architecture
 

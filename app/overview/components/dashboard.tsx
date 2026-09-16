@@ -158,6 +158,7 @@ type WebMCPContext = {
 const ASSET_KEY = "personal-portfolio-tracker-assets-v1";
 const MARKET_KEY = "personal-portfolio-tracker-market-v1";
 const REPORTING_CURRENCY_KEY = "personal-portfolio-tracker-reporting-currency";
+const MARKET_CACHE_TTL_MS = 15 * 60 * 1000;
 const colors = [
   "#d7f268",
   "#7b9e89",
@@ -169,7 +170,7 @@ const colors = [
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
+      staleTime: MARKET_CACHE_TTL_MS,
       refetchOnWindowFocus: false,
       retry: 1,
     },
@@ -200,6 +201,50 @@ function marketFxRates(market: MarketData): FxRates {
       quote.price,
     ]),
   ) as FxRates;
+}
+
+function isQuoteCurrent(quote: Quote | undefined, now: number) {
+  if (!quote || quote.isStale) return false;
+  const updatedAt = Date.parse(quote.updatedAt);
+  return (
+    Number.isFinite(updatedAt) &&
+    updatedAt <= now &&
+    now - updatedAt < MARKET_CACHE_TTL_MS
+  );
+}
+
+function marketNeedsRefresh(
+  assets: Asset[],
+  reportingCurrency: Currency,
+  market: MarketData,
+) {
+  if (assets.length === 0) return false;
+
+  const now = Date.now();
+  const requiredCurrencies = new Set<Currency>([reportingCurrency, "USD"]);
+
+  for (const asset of assets) {
+    if (asset.type !== "gold") requiredCurrencies.add(asset.currency);
+    if (
+      asset.type === "stock" &&
+      !isQuoteCurrent(market.stocks[asset.id], now)
+    )
+      return true;
+  }
+
+  if (
+    assets.some(
+      (asset) =>
+        asset.type === "gold" && !isQuoteCurrent(market.gold, now),
+    )
+  )
+    return true;
+
+  return [...requiredCurrencies].some(
+    (currency) =>
+      currency !== baseCurrency &&
+      !isQuoteCurrent(market.fxRates[currency], now),
+  );
 }
 
 function parsePortfolioBackup(value: unknown): PortfolioBackup {
@@ -909,10 +954,12 @@ export function Dashboard({ view }: { view: DashboardView }) {
     void Promise.resolve(register).catch(() => undefined);
     return () => lifecycle.abort();
   }, []);
+  const shouldRefreshMarket =
+    hydrated && marketNeedsRefresh(assets, reportingCurrency, market);
   const marketQuery = useQuery({
-    queryKey: ["market-data", assets],
+    queryKey: ["market-data", assets, shouldRefreshMarket],
     queryFn: () => fetchMarketData(assets),
-    enabled: hydrated && assets.length > 0,
+    enabled: shouldRefreshMarket,
   });
   useEffect(() => {
     if (marketQuery.data)
