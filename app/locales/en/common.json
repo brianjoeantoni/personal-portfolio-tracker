@@ -1,0 +1,131 @@
+{
+  "app": {
+    "title": "Personal Portfolio Tracker"
+  },
+  "navigation": {
+    "productName": "Portfolio Tracker",
+    "personal": "Personal",
+    "portfolio": "Portfolio",
+    "overview": "Overview",
+    "assets": "Assets",
+    "settings": "Settings",
+    "thisDevice": "This device",
+    "storedLocally": "Stored locally",
+    "personalFinance": "Personal finance",
+    "portfolioOverview": "Portfolio overview",
+    "allAssets": "All assets"
+  },
+  "actions": {
+    "addAsset": "Add asset",
+    "addFirstAsset": "Add your first asset",
+    "refreshPrices": "Refresh prices",
+    "cancel": "Cancel",
+    "saveChanges": "Save changes",
+    "edit": "Edit",
+    "delete": "Delete",
+    "importAssets": "Import assets",
+    "exportAssets": "Export assets",
+    "replaceAssets": "Replace assets"
+  },
+  "theme": {
+    "switchTo": "Switch to {{mode}} mode",
+    "light": "light",
+    "dark": "dark"
+  },
+  "settings": {
+    "portfolioSettings": "Portfolio settings",
+    "reportingCurrency": "Reporting currency",
+    "reportingCurrencyDescription": "Used for all dashboard values and price tooltips.",
+    "language": "Language",
+    "languageDescription": "Used for all app text and labels.",
+    "english": "English",
+    "indonesian": "Bahasa Indonesia"
+  },
+  "currency": {
+    "IDR": "Indonesian rupiah",
+    "USD": "US dollar"
+  },
+  "overview": {
+    "totalValue": "Total portfolio value",
+    "usdIdr": "USD/IDR",
+    "lastKnownUsdIdr": "Last known USD/IDR",
+    "usdIdrUnavailable": "USD/IDR rate unavailable",
+    "calculatedFrom_one": "Calculated from {{count}} asset",
+    "calculatedFrom_other": "Calculated from {{count}} assets",
+    "investedAssets": "Invested assets",
+    "cashAndDeposits": "Cash & deposits",
+    "otherAssets": "Other assets",
+    "allocation": "Allocation",
+    "portfolioWeightByAsset": "Portfolio weight by asset",
+    "portfolioWeightByCategory": "Portfolio weight by category",
+    "groupAllocationBy": "Group allocation by",
+    "asset": "Asset",
+    "category": "Category",
+    "assets": "assets",
+    "categories": "categories",
+    "liveValues": "Live values will appear after a successful price refresh.",
+    "stocksAndEtfs": "Stocks & ETFs",
+    "gold": "Gold",
+    "cashAndBank": "Cash & bank",
+    "customAssets": "Custom assets"
+  },
+  "assets": {
+    "yourAssets": "Your assets",
+    "allAssets": "All assets",
+    "snapshot": "A snapshot of what you own",
+    "reportedIn": "Values are reported in {{currency}}",
+    "stale": "Stale",
+    "awaitingFx": "Awaiting FX",
+    "manualValue": "Manual value",
+    "priceUnavailable": "Price unavailable",
+    "actionsFor": "Actions for {{name}}",
+    "noAssetsToShow": "No assets to show.",
+    "share": "{{value}} share",
+    "shares": "{{value}} shares",
+    "grams": "{{value}} g"
+  },
+  "assetForm": {
+    "addTitle": "Add an asset",
+    "editTitle": "Edit asset",
+    "addDescription": "Enter a holding, balance, or manually valued asset.",
+    "editDescription": "Update the details stored on this device.",
+    "assetType": "Asset type",
+    "stock": "Stock / ETF",
+    "gold": "Gold",
+    "cash": "Cash / bank balance",
+    "custom": "Custom asset",
+    "name": "Name",
+    "quantity": "Quantity",
+    "weight": "Weight (grams)",
+    "balance": "Balance",
+    "currentValue": "Current value",
+    "currency": "Currency",
+    "searchPlaceholder": "Search VOO, BBRI, or a company name",
+    "customPlaceholder": "e.g. Vanguard S&P 500 ETF",
+    "searching": "Searching Yahoo Finance…",
+    "searchUnavailable": "Search unavailable. Try again.",
+    "typeAtLeast": "Type at least 2 characters.",
+    "noMatches": "No matching stock or ETF found.",
+    "selectYahoo": "Select a Yahoo Finance result to continue."
+  },
+  "market": {
+    "marketData": "Market data · {{updatedAt}}",
+    "lastKnownPrices": "Using last known prices · {{updatedAt}}",
+    "addAssetToLoad": "Add an asset to load market data",
+    "loadingSavedPortfolio": "Loading saved portfolio…"
+  },
+  "empty": {
+    "title": "Your dashboard starts here",
+    "description": "Add the assets you own and we’ll convert their current value to {{currency}}.",
+    "storedOnDevice": "Your portfolio stays on this device."
+  },
+  "import": {
+    "replaceTitle": "Replace these assets?",
+    "replaceDescription_one": "This backup contains {{count}} asset. Importing it will replace the assets currently stored on this device.",
+    "replaceDescription_other": "This backup contains {{count}} assets. Importing it will replace the assets currently stored on this device.",
+    "invalidBackup": "Choose a valid portfolio backup file.",
+    "missingPortfolio": "This file does not contain a portfolio.",
+    "invalidAssets": "This backup contains invalid assets.",
+    "readError": "Could not read that portfolio backup."
+  }
+}

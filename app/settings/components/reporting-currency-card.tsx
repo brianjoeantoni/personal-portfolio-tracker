@@ -1,6 +1,7 @@
 "use client";
 
 import { reportingCurrencies, type Currency } from "@/app/lib/currency";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,16 +21,18 @@ export function ReportingCurrencyCard({
   value,
   onValueChange,
 }: ReportingCurrencyCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
       <CardContent className="p-0">
         <div className="flex items-center justify-between gap-6 px-6 py-5">
           <div>
             <Label htmlFor="reporting-currency" className="font-semibold">
-              Reporting currency
+              {t("settings.reportingCurrency")}
             </Label>
             <p className="mt-1 text-sm text-[#718174]">
-              Used for all dashboard values and price tooltips.
+              {t("settings.reportingCurrencyDescription")}
             </p>
           </div>
           <Select

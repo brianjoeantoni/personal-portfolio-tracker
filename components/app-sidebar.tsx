@@ -1,6 +1,7 @@
 'use client'
 
 import { CircleDollarSignIcon, HardDriveIcon, LayoutDashboardIcon, SettingsIcon, WalletCardsIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import {
   Sidebar,
   SidebarContent,
@@ -16,34 +17,36 @@ import {
 type PortfolioView = 'overview' | 'assets' | 'settings'
 
 export function AppSidebar({ activeView, onNavigate, ...props }: React.ComponentProps<typeof Sidebar> & { activeView: PortfolioView; onNavigate: (view: PortfolioView) => void }) {
+  const { t } = useTranslation()
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
           <div className="grid size-8 place-items-center rounded-lg bg-[#283f34] text-[#d7f268]"><CircleDollarSignIcon size={17} /></div>
-          <div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">Portfolio Tracker</p><p className="truncate text-xs text-sidebar-foreground/65">Personal</p></div>
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">{t('navigation.productName')}</p><p className="truncate text-xs text-sidebar-foreground/65">{t('navigation.personal')}</p></div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Portfolio</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('navigation.portfolio')}</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton className="cursor-pointer" tooltip="Overview" isActive={activeView === 'overview'} onClick={() => onNavigate('overview')}>
+              <SidebarMenuButton className="cursor-pointer" tooltip={t('navigation.overview')} isActive={activeView === 'overview'} onClick={() => onNavigate('overview')}>
                 <LayoutDashboardIcon />
-                <span>Overview</span>
+                <span>{t('navigation.overview')}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton className="cursor-pointer" tooltip="Assets" isActive={activeView === 'assets'} onClick={() => onNavigate('assets')}>
+              <SidebarMenuButton className="cursor-pointer" tooltip={t('navigation.assets')} isActive={activeView === 'assets'} onClick={() => onNavigate('assets')}>
                 <WalletCardsIcon />
-                <span>Assets</span>
+                <span>{t('navigation.assets')}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton className="cursor-pointer" tooltip="Settings" isActive={activeView === 'settings'} onClick={() => onNavigate('settings')}>
+              <SidebarMenuButton className="cursor-pointer" tooltip={t('navigation.settings')} isActive={activeView === 'settings'} onClick={() => onNavigate('settings')}>
                 <SettingsIcon />
-                <span>Settings</span>
+                <span>{t('navigation.settings')}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -52,7 +55,7 @@ export function AppSidebar({ activeView, onNavigate, ...props }: React.Component
       <SidebarFooter>
         <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-sidebar-foreground/70 group-data-[collapsible=icon]:justify-center">
           <HardDriveIcon className="size-4 shrink-0" />
-          <div className="min-w-0 text-xs group-data-[collapsible=icon]:hidden"><p className="font-medium text-sidebar-foreground">This device</p><p>Stored locally</p></div>
+          <div className="min-w-0 text-xs group-data-[collapsible=icon]:hidden"><p className="font-medium text-sidebar-foreground">{t('navigation.thisDevice')}</p><p>{t('navigation.storedLocally')}</p></div>
         </div>
       </SidebarFooter>
     </Sidebar>

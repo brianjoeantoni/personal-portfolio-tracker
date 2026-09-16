@@ -1,6 +1,7 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,12 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const allocationViewLabels = {
-  asset: "Asset",
-  category: "Category",
-} as const;
-
-export type AllocationView = keyof typeof allocationViewLabels;
+export type AllocationView = "asset" | "category";
 
 type AllocationItem = {
   name: string;
@@ -42,20 +38,22 @@ export function AllocationCard({
   reportingCurrency,
   formatValue,
 }: AllocationCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
       <CardContent className="p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Allocation</h2>
+            <h2 className="font-semibold">{t("overview.allocation")}</h2>
             <p className="mt-1 text-sm text-[#718174]">
               {view === "asset"
-                ? "Portfolio weight by asset"
-                : "Portfolio weight by category"}
+                ? t("overview.portfolioWeightByAsset")
+                : t("overview.portfolioWeightByCategory")}
             </p>
             <div className="mt-3 w-40">
               <Label htmlFor="allocation-filter" className="sr-only">
-                Group allocation by
+                {t("overview.groupAllocationBy")}
               </Label>
               <Select
                 value={view}
@@ -66,7 +64,7 @@ export function AllocationCard({
                   className="h-8 bg-[#eff3ed] text-xs dark:bg-[#273a2f]"
                 >
                   <SelectValue>
-                    {(value) => allocationViewLabels[value as AllocationView]}
+                    {(value) => t(`overview.${value}`)}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent
@@ -75,8 +73,8 @@ export function AllocationCard({
                   align="start"
                   alignItemWithTrigger={false}
                 >
-                  <SelectItem value="asset">Asset</SelectItem>
-                  <SelectItem value="category">Category</SelectItem>
+                  <SelectItem value="asset">{t("overview.asset")}</SelectItem>
+                  <SelectItem value="category">{t("overview.category")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -123,7 +121,7 @@ export function AllocationCard({
                     {data.length}
                   </p>
                   <p className="text-xs text-[#718174]">
-                    {view === "asset" ? "assets" : "categories"}
+                    {view === "asset" ? t("overview.assets") : t("overview.categories")}
                   </p>
                 </div>
               </div>
@@ -152,7 +150,7 @@ export function AllocationCard({
           </>
         ) : (
           <div className="grid h-72 place-items-center text-center text-sm text-[#718174]">
-            Live values will appear after a successful price refresh.
+            {t("overview.liveValues")}
           </div>
         )}
       </CardContent>

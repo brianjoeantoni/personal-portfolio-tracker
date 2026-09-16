@@ -88,7 +88,3 @@ export function convertFromIdr(
   const rate = idrRateFor(currency, fxRates);
   return rate ? value / rate : undefined;
 }
-
-export function reportingCurrencyLabel(currency: Currency) {
-  return currencyByCode[currency].label;
-}

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
+import { LocaleProvider } from '@/components/locale-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import './globals.css';
 
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           enableSystem
           storageKey="personal-portfolio-tracker-theme"
         >
-          <TooltipProvider>{children}</TooltipProvider>
+          <LocaleProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

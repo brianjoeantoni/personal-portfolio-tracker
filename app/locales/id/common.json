@@ -1,0 +1,131 @@
+{
+  "app": {
+    "title": "Pelacak Portofolio Pribadi"
+  },
+  "navigation": {
+    "productName": "Pelacak Portofolio",
+    "personal": "Pribadi",
+    "portfolio": "Portofolio",
+    "overview": "Ringkasan",
+    "assets": "Aset",
+    "settings": "Pengaturan",
+    "thisDevice": "Perangkat ini",
+    "storedLocally": "Disimpan secara lokal",
+    "personalFinance": "Keuangan pribadi",
+    "portfolioOverview": "Ringkasan portofolio",
+    "allAssets": "Semua aset"
+  },
+  "actions": {
+    "addAsset": "Tambah aset",
+    "addFirstAsset": "Tambah aset pertama",
+    "refreshPrices": "Perbarui harga",
+    "cancel": "Batal",
+    "saveChanges": "Simpan perubahan",
+    "edit": "Ubah",
+    "delete": "Hapus",
+    "importAssets": "Impor aset",
+    "exportAssets": "Ekspor aset",
+    "replaceAssets": "Ganti aset"
+  },
+  "theme": {
+    "switchTo": "Ganti ke mode {{mode}}",
+    "light": "terang",
+    "dark": "gelap"
+  },
+  "settings": {
+    "portfolioSettings": "Pengaturan portofolio",
+    "reportingCurrency": "Mata uang pelaporan",
+    "reportingCurrencyDescription": "Digunakan untuk seluruh nilai dasbor dan tooltip harga.",
+    "language": "Bahasa",
+    "languageDescription": "Digunakan untuk seluruh teks dan label aplikasi.",
+    "english": "English",
+    "indonesian": "Bahasa Indonesia"
+  },
+  "currency": {
+    "IDR": "Rupiah Indonesia",
+    "USD": "Dolar AS"
+  },
+  "overview": {
+    "totalValue": "Total nilai portofolio",
+    "usdIdr": "USD/IDR",
+    "lastKnownUsdIdr": "USD/IDR terakhir",
+    "usdIdrUnavailable": "Nilai tukar USD/IDR tidak tersedia",
+    "calculatedFrom_one": "Dihitung dari {{count}} aset",
+    "calculatedFrom_other": "Dihitung dari {{count}} aset",
+    "investedAssets": "Aset investasi",
+    "cashAndDeposits": "Kas & simpanan",
+    "otherAssets": "Aset lainnya",
+    "allocation": "Alokasi",
+    "portfolioWeightByAsset": "Bobot portofolio per aset",
+    "portfolioWeightByCategory": "Bobot portofolio per kategori",
+    "groupAllocationBy": "Kelompokkan alokasi berdasarkan",
+    "asset": "Aset",
+    "category": "Kategori",
+    "assets": "aset",
+    "categories": "kategori",
+    "liveValues": "Nilai terkini akan muncul setelah harga berhasil diperbarui.",
+    "stocksAndEtfs": "Saham & ETF",
+    "gold": "Emas",
+    "cashAndBank": "Kas & bank",
+    "customAssets": "Aset kustom"
+  },
+  "assets": {
+    "yourAssets": "Aset Anda",
+    "allAssets": "Semua aset",
+    "snapshot": "Ringkasan aset yang Anda miliki",
+    "reportedIn": "Nilai dilaporkan dalam {{currency}}",
+    "stale": "Tertunda",
+    "awaitingFx": "Menunggu kurs",
+    "manualValue": "Nilai manual",
+    "priceUnavailable": "Harga tidak tersedia",
+    "actionsFor": "Tindakan untuk {{name}}",
+    "noAssetsToShow": "Tidak ada aset untuk ditampilkan.",
+    "share": "{{value}} saham",
+    "shares": "{{value}} saham",
+    "grams": "{{value}} g"
+  },
+  "assetForm": {
+    "addTitle": "Tambah aset",
+    "editTitle": "Ubah aset",
+    "addDescription": "Masukkan kepemilikan, saldo, atau aset dengan nilai manual.",
+    "editDescription": "Perbarui detail yang disimpan pada perangkat ini.",
+    "assetType": "Jenis aset",
+    "stock": "Saham / ETF",
+    "gold": "Emas",
+    "cash": "Kas / saldo bank",
+    "custom": "Aset kustom",
+    "name": "Nama",
+    "quantity": "Jumlah",
+    "weight": "Berat (gram)",
+    "balance": "Saldo",
+    "currentValue": "Nilai saat ini",
+    "currency": "Mata uang",
+    "searchPlaceholder": "Cari VOO, BBRI, atau nama perusahaan",
+    "customPlaceholder": "mis. Vanguard S&P 500 ETF",
+    "searching": "Mencari di Yahoo Finance…",
+    "searchUnavailable": "Pencarian tidak tersedia. Coba lagi.",
+    "typeAtLeast": "Masukkan setidaknya 2 karakter.",
+    "noMatches": "Tidak ada saham atau ETF yang cocok.",
+    "selectYahoo": "Pilih hasil dari Yahoo Finance untuk melanjutkan."
+  },
+  "market": {
+    "marketData": "Data pasar · {{updatedAt}}",
+    "lastKnownPrices": "Menggunakan harga terakhir · {{updatedAt}}",
+    "addAssetToLoad": "Tambahkan aset untuk memuat data pasar",
+    "loadingSavedPortfolio": "Memuat portofolio tersimpan…"
+  },
+  "empty": {
+    "title": "Dasbor Anda dimulai di sini",
+    "description": "Tambahkan aset yang Anda miliki dan kami akan mengonversi nilainya saat ini ke {{currency}}.",
+    "storedOnDevice": "Portofolio Anda tersimpan di perangkat ini."
+  },
+  "import": {
+    "replaceTitle": "Ganti aset ini?",
+    "replaceDescription_one": "Cadangan ini berisi {{count}} aset. Mengimpornya akan mengganti aset yang saat ini tersimpan di perangkat ini.",
+    "replaceDescription_other": "Cadangan ini berisi {{count}} aset. Mengimpornya akan mengganti aset yang saat ini tersimpan di perangkat ini.",
+    "invalidBackup": "Pilih berkas cadangan portofolio yang valid.",
+    "missingPortfolio": "Berkas ini tidak berisi portofolio.",
+    "invalidAssets": "Cadangan ini berisi aset yang tidak valid.",
+    "readError": "Tidak dapat membaca cadangan portofolio tersebut."
+  }
+}

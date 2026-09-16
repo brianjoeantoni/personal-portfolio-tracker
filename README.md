@@ -15,6 +15,7 @@ on that device and is not saved in a database or sent to an account.
 - Gold valuation from Yahoo Finance's `GC=F` gold-futures reference.
 - Cash and custom assets with manually entered values.
 - IDR and USD reporting currencies, with a settings-based preference.
+- English and Bahasa Indonesia interface translations, with a settings-based preference.
 - Asset and category allocation views.
 - Cached market prices with a stale-price indicator when a refresh fails.
 - JSON export and import for moving or backing up the local portfolio.
@@ -30,6 +31,7 @@ on that device and is not saved in a database or sent to an account.
 | Client data fetching | TanStack Query |
 | Charts | Recharts |
 | Theme preference | next-themes |
+| Internationalization | i18next and react-i18next |
 | Icons | Lucide React |
 | Deployment | Cloudflare Workers |
 | Market data | Yahoo Finance and ExchangeRate-API |
@@ -68,7 +70,7 @@ npm run format  # Format with Oxfmt
 | `/` | Redirects to `/overview` |
 | `/overview` | Portfolio summary, asset snapshot, allocation chart |
 | `/assets` | Full asset list and asset management |
-| `/settings` | Reporting-currency selection |
+| `/settings` | Reporting-currency and app-language selection |
 
 ## Project structure
 
@@ -81,6 +83,10 @@ app/
     page.tsx                   # /assets route
   lib/
     currency.ts                # Currency registry, formatting, and conversion
+    i18n.ts                    # Locale registry and i18next setup
+  locales/
+    en/common.json             # English interface copy
+    id/common.json             # Bahasa Indonesia interface copy
   overview/
     components/
       allocation-card.tsx      # Allocation filter and pie chart
@@ -88,6 +94,7 @@ app/
     page.tsx                   # /overview route
   settings/
     components/
+      language-card.tsx
       reporting-currency-card.tsx
     page.tsx                   # /settings route
   layout.tsx                   # Metadata, fonts, providers
@@ -95,6 +102,7 @@ app/
 components/
   app-sidebar.tsx              # Main navigation
   dashboard.tsx                # Shared state, shell, and reusable asset UI
+  locale-provider.tsx          # Persisted app-language provider
   theme-provider.tsx           # next-themes wrapper
   ui/                          # Reusable UI primitives
 public/
@@ -110,7 +118,7 @@ stay consistent as the user moves between pages.
 ### Device-local portfolio
 
 The browser's local storage holds the portfolio, cached market data, and the
-reporting-currency preference. Clearing browser site data clears the portfolio,
+reporting-currency and language preferences. Clearing browser site data clears the portfolio,
 unless it has been exported first.
 
 Use the gear menu in the top bar to export a JSON backup before changing
@@ -190,6 +198,25 @@ price provider and mapping before it should be enabled.
 `baseCurrency` should remain `IDR` unless the whole valuation model and the
 gold-price reference are deliberately redesigned. The USD/IDR line in the
 overview and the gold-futures calculation are intentionally USD-specific.
+
+## Interface languages
+
+All visible application copy comes from the matching JSON file in
+`app/locales/<locale>/common.json`. The selected language is stored locally
+under `personal-portfolio-tracker-locale` and can be changed in **Settings**.
+
+### Add a future language
+
+1. Copy `app/locales/en/common.json` into a new locale folder, for example
+   `app/locales/ja/common.json`, and translate every value while keeping the
+   keys unchanged.
+2. Import that JSON file in `app/lib/i18n.ts`, then add the locale code to the
+   `locales` array and the `resources` object.
+3. Add the language option to `app/settings/components/language-card.tsx` and
+   its display label to each existing translation file.
+
+Every component reads the same `common` namespace, so adding a language does
+not require changing its UI components.
 
 ## Deployment
 

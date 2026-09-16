@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,6 +66,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { type AllocationView } from "@/app/overview/components/allocation-card";
 import { OverviewContent } from "@/app/overview/components/overview-content";
 import { ReportingCurrencyCard } from "@/app/settings/components/reporting-currency-card";
+import { LanguageCard } from "@/app/settings/components/language-card";
+import { useLocale } from "@/components/locale-provider";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -90,19 +94,22 @@ import {
   isAssetCurrency,
   isReportingCurrency,
   idrRateFor,
-  reportingCurrencyLabel,
   type Currency,
   type FxRates,
 } from "@/app/lib/currency";
 
 type AssetType = "stock" | "gold" | "cash" | "custom";
 
-const assetTypeLabels: Record<AssetType, string> = {
-  stock: "Stock / ETF",
-  gold: "Gold",
-  cash: "Cash / bank balance",
-  custom: "Custom asset",
+const assetTypeTranslationKeys: Record<AssetType, string> = {
+  stock: "assetForm.stock",
+  gold: "assetForm.gold",
+  cash: "assetForm.cash",
+  custom: "assetForm.custom",
 };
+
+function assetTypeLabel(type: AssetType, t: TFunction) {
+  return t(assetTypeTranslationKeys[type]);
+}
 
 type Asset = {
   id: string;
@@ -244,12 +251,12 @@ function marketNeedsRefresh(
   );
 }
 
-function parsePortfolioBackup(value: unknown): PortfolioBackup {
+function parsePortfolioBackup(value: unknown, t: TFunction): PortfolioBackup {
   if (!value || typeof value !== "object")
-    throw new Error("Choose a valid portfolio backup file.");
+    throw new Error(t("import.invalidBackup"));
   const backup = value as Partial<PortfolioBackup>;
   if (!Array.isArray(backup.assets))
-    throw new Error("This file does not contain a portfolio.");
+    throw new Error(t("import.missingPortfolio"));
   const validTypes: AssetType[] = ["stock", "gold", "cash", "custom"];
   const validAssets = backup.assets.every((asset) => {
     if (!asset || typeof asset !== "object") return false;
@@ -261,7 +268,7 @@ function parsePortfolioBackup(value: unknown): PortfolioBackup {
       isAssetCurrency(item.currency)
     );
   });
-  if (!validAssets) throw new Error("This backup contains invalid assets.");
+  if (!validAssets) throw new Error(t("import.invalidAssets"));
   const market =
     backup.market &&
     typeof backup.market === "object" &&
@@ -287,14 +294,14 @@ function formatIDR(value: number) {
 function formatMoney(value: number, currency: Currency) {
   return formatCurrency(value, currency);
 }
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }).format(
     value || 0,
   );
 }
-function timeLabel(iso?: string) {
+function timeLabel(iso: string | undefined, locale: string) {
   return iso
-    ? new Intl.DateTimeFormat("en-GB", {
+    ? new Intl.DateTimeFormat(locale, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -303,7 +310,7 @@ function timeLabel(iso?: string) {
         timeZone: "Asia/Jakarta",
         timeZoneName: "short",
       }).format(new Date(iso))
-    : "No market data yet";
+    : "";
 }
 
 async function yahooPrice(
@@ -435,7 +442,7 @@ function formatReportingValue(
     marketFxRates(market),
   );
   return convertedValue === undefined
-    ? `${reportingCurrency} rate unavailable`
+    ? "—"
     : formatCurrency(convertedValue, reportingCurrency);
 }
 function AssetIcon({ type }: { type: AssetType }) {
@@ -455,6 +462,7 @@ function AssetForm({
   onSave: (asset: Asset) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [type, setType] = useState<AssetType>(asset?.type ?? "stock");
   const [name, setName] = useState(asset?.name ?? "");
   const [currency, setCurrency] = useState<Currency>(
@@ -530,23 +538,23 @@ function AssetForm({
   }
   const amountLabel =
     type === "stock"
-      ? "Quantity"
+      ? t("assetForm.quantity")
       : type === "gold"
-        ? "Weight (grams)"
+        ? t("assetForm.weight")
         : type === "cash"
-          ? "Balance"
-          : "Current value";
+          ? t("assetForm.balance")
+          : t("assetForm.currentValue");
   return (
     <form className="space-y-5" onSubmit={submit}>
       <div className="space-y-2">
-        <Label htmlFor="asset-type">Asset type</Label>
+        <Label htmlFor="asset-type">{t("assetForm.assetType")}</Label>
         <Select
           value={type}
           onValueChange={(value) => setType(value as AssetType)}
         >
           <SelectTrigger id="asset-type">
             <SelectValue>
-              {(value) => assetTypeLabels[value as AssetType]}
+              {(value) => assetTypeLabel(value as AssetType, t)}
             </SelectValue>
           </SelectTrigger>
           <SelectContent
@@ -556,16 +564,16 @@ function AssetForm({
             alignItemWithTrigger={false}
             className="w-56"
           >
-            <SelectItem value="stock">Stock / ETF</SelectItem>
-            <SelectItem value="gold">Gold</SelectItem>
-            <SelectItem value="cash">Cash / bank balance</SelectItem>
-            <SelectItem value="custom">Custom asset</SelectItem>
+            <SelectItem value="stock">{t("assetForm.stock")}</SelectItem>
+            <SelectItem value="gold">{t("assetForm.gold")}</SelectItem>
+            <SelectItem value="cash">{t("assetForm.cash")}</SelectItem>
+            <SelectItem value="custom">{t("assetForm.custom")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
       {type !== "stock" && (
         <div className="space-y-2">
-          <Label htmlFor="asset-name">Name</Label>
+          <Label htmlFor="asset-name">{t("assetForm.name")}</Label>
           <Input
             id="asset-name"
             autoFocus
@@ -576,14 +584,14 @@ function AssetForm({
                 ? "UBS Gold"
                 : type === "cash"
                   ? "BCA"
-                  : "e.g. Vanguard S&P 500 ETF"
+                  : t("assetForm.customPlaceholder")
             }
           />
         </div>
       )}
       {type === "stock" && (
         <div className="space-y-2">
-          <Label>Stock / ETF</Label>
+          <Label>{t("assetForm.stock")}</Label>
           <Combobox
             value={selectedInstrument ?? null}
             onValueChange={(instrument) => {
@@ -601,7 +609,7 @@ function AssetForm({
             itemToStringValue={(instrument) => instrument.symbol}
           >
             <ComboboxInput
-              placeholder="Search VOO, BBRI, or a company name"
+              placeholder={t("assetForm.searchPlaceholder")}
               showClear
             />
             <ComboboxContent>
@@ -620,18 +628,18 @@ function AssetForm({
                 ))}
                 <ComboboxEmpty>
                   {searchState === "loading"
-                    ? "Searching Yahoo Finance…"
+                    ? t("assetForm.searching")
                     : searchState === "error"
-                      ? "Search unavailable. Try again."
+                      ? t("assetForm.searchUnavailable")
                       : searchQuery.trim().length < 2
-                        ? "Type at least 2 characters."
-                        : "No matching stock or ETF found."}
+                        ? t("assetForm.typeAtLeast")
+                        : t("assetForm.noMatches")}
                 </ComboboxEmpty>
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
           <p className="text-xs text-[#718174]">
-            Select a Yahoo Finance result to continue.
+            {t("assetForm.selectYahoo")}
           </p>
         </div>
       )}
@@ -650,7 +658,7 @@ function AssetForm({
       </div>
       {type !== "gold" && type !== "stock" && (
         <div className="space-y-2">
-          <Label>Currency</Label>
+          <Label>{t("assetForm.currency")}</Label>
           <Select
             value={currency}
             onValueChange={(value) => setCurrency(value as Currency)}
@@ -675,13 +683,13 @@ function AssetForm({
       )}
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {t("actions.cancel")}
         </Button>
         <Button
           type="submit"
           className="bg-[#283f34] text-white hover:bg-[#1e3028]"
         >
-          {asset ? "Save changes" : "Add asset"}
+          {asset ? t("actions.saveChanges") : t("actions.addAsset")}
         </Button>
       </div>
     </form>
@@ -705,18 +713,20 @@ function AssetTable({
   onDelete: (id: string) => void;
   compact?: boolean;
 }) {
+  const { t, i18n } = useTranslation();
+
   return (
     <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
       <CardContent className="p-0">
         <div className="flex items-center justify-between px-6 py-5">
           <div>
             <h2 className="font-semibold">
-              {compact ? "Your assets" : "All assets"}
+              {compact ? t("assets.yourAssets") : t("assets.allAssets")}
             </h2>
             <p className="mt-1 text-sm text-[#718174]">
               {compact
-                ? "A snapshot of what you own"
-                : `Values are reported in ${reportingCurrency}`}
+                ? t("assets.snapshot")
+                : t("assets.reportedIn", { currency: reportingCurrency })}
             </p>
           </div>
           {compact && <ArrowUpRight className="text-[#678072]" size={18} />}
@@ -726,9 +736,13 @@ function AssetTable({
             const quote = quoteFor(asset, market);
             const amount =
               asset.type === "gold"
-                ? `${formatNumber(asset.quantity ?? 0)} g`
+                ? t("assets.grams", {
+                    value: formatNumber(asset.quantity ?? 0, i18n.language),
+                  })
                 : asset.type === "stock"
-                  ? `${formatNumber(asset.quantity ?? 0)} shares`
+                  ? t((asset.quantity ?? 0) === 1 ? "assets.share" : "assets.shares", {
+                      value: formatNumber(asset.quantity ?? 0, i18n.language),
+                    })
                   : formatMoney(asset.value ?? 0, asset.currency);
             return (
               <div
@@ -746,7 +760,7 @@ function AssetTable({
                         variant="outline"
                         className="border-amber-200 bg-amber-50 px-1.5 py-0 text-[10px] text-amber-700"
                       >
-                        Stale
+                        {t("assets.stale")}
                       </Badge>
                     )}
                   </div>
@@ -769,10 +783,10 @@ function AssetTable({
                     {value && total
                       ? `${((value / total) * 100).toFixed(1)}%`
                       : quote
-                        ? "Awaiting FX"
+                        ? t("assets.awaitingFx")
                         : asset.type === "cash" && asset.currency === "IDR"
-                          ? "Manual value"
-                          : "Price unavailable"}
+                          ? t("assets.manualValue")
+                          : t("assets.priceUnavailable")}
                   </p>
                 </div>
                 <DropdownMenu>
@@ -785,7 +799,7 @@ function AssetTable({
                       >
                         <MoreHorizontal />
                         <span className="sr-only">
-                          Actions for {asset.name}
+                          {t("assets.actionsFor", { name: asset.name })}
                         </span>
                       </Button>
                     }
@@ -793,14 +807,14 @@ function AssetTable({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onEdit(asset)}>
                       <Pencil />
-                      Edit
+                      {t("actions.edit")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => onDelete(asset.id)}
                     >
                       <Trash2 />
-                      Delete
+                      {t("actions.delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -810,7 +824,7 @@ function AssetTable({
         </div>
         {compact && rows.length === 0 && (
           <div className="px-6 py-12 text-center text-sm text-[#718174]">
-            No assets to show.
+            {t("assets.noAssetsToShow")}
           </div>
         )}
       </CardContent>
@@ -929,6 +943,8 @@ function DashboardSkeleton({ view }: { view: DashboardView }) {
 type DashboardView = "overview" | "assets" | "settings";
 
 export function Dashboard({ view }: { view: DashboardView }) {
+  const { t, i18n } = useTranslation();
+  const { locale, setLocale, ready: localeReady } = useLocale();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [market, setMarket] = useState<MarketData>(emptyMarket);
   const [hydrated, setHydrated] = useState(false);
@@ -1145,14 +1161,14 @@ export function Dashboard({ view }: { view: DashboardView }) {
       .text()
       .then((text) => {
         setImportError(undefined);
-        setPendingImport(parsePortfolioBackup(JSON.parse(text)));
+        setPendingImport(parsePortfolioBackup(JSON.parse(text), t));
       })
       .catch((error: unknown) => {
         setPendingImport(undefined);
         setImportError(
           error instanceof Error
             ? error.message
-            : "Could not read that portfolio backup.",
+            : t("import.readError"),
         );
       });
   }
@@ -1173,12 +1189,12 @@ export function Dashboard({ view }: { view: DashboardView }) {
     .map((type, index) => ({
       name:
         type === "stock"
-          ? "Stocks & ETFs"
+          ? t("overview.stocksAndEtfs")
           : type === "gold"
-            ? "Gold"
+            ? t("overview.gold")
             : type === "cash"
-              ? "Cash & bank"
-              : "Custom assets",
+              ? t("overview.cashAndBank")
+              : t("overview.customAssets"),
       value: assetRows
         .filter((row) => row.asset.type === type)
         .reduce((sum, row) => sum + row.value, 0),
@@ -1189,21 +1205,21 @@ export function Dashboard({ view }: { view: DashboardView }) {
     allocationView === "asset" ? assetChartData : categoryChartData;
   const summary = [
     {
-      label: "Invested assets",
+      labelKey: "overview.investedAssets",
       value: assets
         .filter((asset) => asset.type === "stock" || asset.type === "gold")
         .reduce((sum, asset) => sum + assetValue(asset, market), 0),
       icon: TrendingUp,
     },
     {
-      label: "Cash & deposits",
+      labelKey: "overview.cashAndDeposits",
       value: assets
         .filter((asset) => asset.type === "cash")
         .reduce((sum, asset) => sum + assetValue(asset, market), 0),
       icon: WalletCards,
     },
     {
-      label: "Other assets",
+      labelKey: "overview.otherAssets",
       value: assets
         .filter((asset) => asset.type === "custom")
         .reduce((sum, asset) => sum + assetValue(asset, market), 0),
@@ -1231,16 +1247,16 @@ export function Dashboard({ view }: { view: DashboardView }) {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <span className="text-[#718174]">Personal finance</span>
+                  <span className="text-[#718174]">{t("navigation.personalFinance")}</span>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>
                     {view === "overview"
-                      ? "Portfolio overview"
+                      ? t("navigation.portfolioOverview")
                       : view === "assets"
-                        ? "All assets"
-                        : "Settings"}
+                        ? t("navigation.allAssets")
+                        : t("navigation.settings")}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -1249,8 +1265,12 @@ export function Dashboard({ view }: { view: DashboardView }) {
               variant="ghost"
               size="icon-sm"
               className="ml-auto"
-              aria-label={`Switch to ${activeTheme === "dark" ? "light" : "dark"} mode`}
-              title={`Switch to ${activeTheme === "dark" ? "light" : "dark"} mode`}
+              aria-label={t("theme.switchTo", {
+                mode: t(activeTheme === "dark" ? "theme.light" : "theme.dark"),
+              })}
+              title={t("theme.switchTo", {
+                mode: t(activeTheme === "dark" ? "theme.light" : "theme.dark"),
+              })}
               onClick={() =>
                 setTheme(activeTheme === "dark" ? "light" : "dark")
               }
@@ -1270,8 +1290,8 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Portfolio settings"
-                    title="Portfolio settings"
+                    aria-label={t("settings.portfolioSettings")}
+                    title={t("settings.portfolioSettings")}
                   >
                     <Settings />
                   </Button>
@@ -1283,14 +1303,14 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   onClick={() => importInputRef.current?.click()}
                 >
                   <Upload />
-                  Import assets
+                  {t("actions.importAssets")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-nowrap"
                   onClick={exportPortfolio}
                 >
                   <Download />
-                  Export assets
+                  {t("actions.exportAssets")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1299,14 +1319,14 @@ export function Dashboard({ view }: { view: DashboardView }) {
             <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-base font-medium text-[#678072]">
-                  Personal finance
+                  {t("navigation.personalFinance")}
                 </p>
                 <h1 className="text-2xl font-semibold tracking-tight">
                   {view === "overview"
-                    ? "Overview"
+                    ? t("navigation.overview")
                     : view === "assets"
-                      ? "Assets"
-                      : "Settings"}
+                      ? t("navigation.assets")
+                      : t("navigation.settings")}
                 </h1>
               </div>
               {view !== "settings" && (
@@ -1316,10 +1336,16 @@ export function Dashboard({ view }: { view: DashboardView }) {
                     className={`mr-2 inline-block h-2 w-2 rounded-full ${allStale ? "bg-amber-400" : hasPrices ? "bg-emerald-500" : "bg-[#a9b7ae]"}`}
                   />
                   {hasPrices
-                    ? `${allStale ? "Using last known prices · " : "Market data · "}${timeLabel(updatedAt)}`
+                    ? allStale
+                      ? t("market.lastKnownPrices", {
+                          updatedAt: timeLabel(updatedAt, i18n.language),
+                        })
+                      : t("market.marketData", {
+                          updatedAt: timeLabel(updatedAt, i18n.language),
+                        })
                     : hydrated
-                      ? "Add an asset to load market data"
-                      : "Loading saved portfolio…"}
+                      ? t("market.addAssetToLoad")
+                      : t("market.loadingSavedPortfolio")}
                 </div>
                 <Button
                   variant="outline"
@@ -1330,7 +1356,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   <RefreshCw
                     className={marketQuery.isFetching ? "animate-spin" : ""}
                   />
-                  Refresh prices
+                  {t("actions.refreshPrices")}
                 </Button>
                 <Button
                   onClick={openNew}
@@ -1338,7 +1364,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   className="bg-[#283f34] text-white hover:bg-[#1e3028]"
                 >
                   <Plus />
-                  Add asset
+                  {t("actions.addAsset")}
                 </Button>
                 </div>
               )}
@@ -1348,13 +1374,16 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 {importError}
               </p>
             )}
-            {!hydrated ? (
+            {!hydrated || !localeReady ? (
               <DashboardSkeleton view={view} />
             ) : view === "settings" ? (
-              <ReportingCurrencyCard
-                value={reportingCurrency}
-                onValueChange={setReportingCurrency}
-              />
+              <div className="space-y-6">
+                <ReportingCurrencyCard
+                  value={reportingCurrency}
+                  onValueChange={setReportingCurrency}
+                />
+                <LanguageCard value={locale} onValueChange={setLocale} />
+              </div>
             ) : assets.length === 0 ? (
               <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
                 <CardContent className="flex min-h-[470px] flex-col items-center justify-center px-6 text-center">
@@ -1362,21 +1391,22 @@ export function Dashboard({ view }: { view: DashboardView }) {
                     <Banknote size={28} />
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">
-                    Your dashboard starts here
+                    {t("empty.title")}
                   </h2>
                   <p className="mt-2 max-w-sm text-[15px] leading-6 text-[#678072]">
-                    Add the assets you own and we’ll convert their current value
-                    to {reportingCurrencyLabel(reportingCurrency)}.
+                    {t("empty.description", {
+                      currency: t(`currency.${reportingCurrency}`),
+                    })}
                   </p>
                   <Button
                     className="mt-7 bg-[#283f34] text-white hover:bg-[#1e3028]"
                     onClick={openNew}
                   >
                     <Plus />
-                    Add your first asset
+                    {t("actions.addFirstAsset")}
                   </Button>
                   <p className="mt-5 text-xs text-[#8b9a90]">
-                    Your portfolio stays on this device.
+                    {t("empty.storedOnDevice")}
                   </p>
                 </CardContent>
               </Card>
@@ -1395,8 +1425,8 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 assetCount={assets.length}
                 usdIdrRateLabel={
                   usdIdrQuote
-                    ? `${usdIdrQuote.isStale ? "Last known USD/IDR" : "USD/IDR"} | USD 1 = ${formatIDR(usdIdrQuote.price)}`
-                    : "USD/IDR rate unavailable"
+                    ? `${usdIdrQuote.isStale ? t("overview.lastKnownUsdIdr") : t("overview.usdIdr")} | USD 1 = ${formatIDR(usdIdrQuote.price)}`
+                    : t("overview.usdIdrUnavailable")
                 }
                 summary={summary}
                 assetSnapshot={
@@ -1431,12 +1461,12 @@ export function Dashboard({ view }: { view: DashboardView }) {
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Edit asset" : "Add an asset"}
+                  {editing ? t("assetForm.editTitle") : t("assetForm.addTitle")}
                 </DialogTitle>
                 <DialogDescription>
                   {editing
-                    ? "Update the details stored on this device."
-                    : "Enter a holding, balance, or manually valued asset."}
+                    ? t("assetForm.editDescription")
+                    : t("assetForm.addDescription")}
                 </DialogDescription>
               </DialogHeader>
               <AssetForm
@@ -1454,12 +1484,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
           >
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Replace these assets?</DialogTitle>
+                <DialogTitle>{t("import.replaceTitle")}</DialogTitle>
                 <DialogDescription>
-                  This backup contains {pendingImport?.assets.length ?? 0}{" "}
-                  {pendingImport?.assets.length === 1 ? "asset" : "assets"}.
-                  Importing it will replace the assets currently stored on this
-                  device.
+                  {t("import.replaceDescription", {
+                    count: pendingImport?.assets.length ?? 0,
+                  })}
                 </DialogDescription>
               </DialogHeader>
               <div className="flex justify-end gap-2">
@@ -1468,14 +1497,14 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   variant="outline"
                   onClick={() => setPendingImport(undefined)}
                 >
-                  Cancel
+                  {t("actions.cancel")}
                 </Button>
                 <Button
                   type="button"
                   onClick={confirmImport}
                   className="bg-[#283f34] text-white hover:bg-[#1e3028]"
                 >
-                  Replace assets
+                  {t("actions.replaceAssets")}
                 </Button>
               </div>
             </DialogContent>
