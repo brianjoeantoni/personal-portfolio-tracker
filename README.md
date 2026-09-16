@@ -246,5 +246,4 @@ Enable preview builds if pull-request previews are useful for your workflow.
 
 ## License
 
-This project does not currently declare a license. Add one before distributing
-or open-sourcing the code.
+This project is licensed under the [MIT License](LICENSE).
