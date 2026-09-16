@@ -1,6 +1,6 @@
 # Personal Portfolio Tracker
 
-A private, local-first dashboard for tracking personal net worth. Add stocks,
+A private, local-first dashboard for tracking a personal portfolio. Add stocks,
 ETFs, gold, cash, and custom assets; the app fetches available market prices,
 converts everything to a selected reporting currency, and visualizes portfolio
 allocation.
@@ -66,7 +66,7 @@ npm run format  # Format with Oxfmt
 | Route | Purpose |
 | --- | --- |
 | `/` | Redirects to `/overview` |
-| `/overview` | Net-worth summary, asset snapshot, allocation chart |
+| `/overview` | Portfolio summary, asset snapshot, allocation chart |
 | `/assets` | Full asset list and asset management |
 | `/settings` | Reporting-currency selection |
 

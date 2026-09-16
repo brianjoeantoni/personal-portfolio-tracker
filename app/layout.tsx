@@ -7,7 +7,7 @@ import './globals.css';
 const geist = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Personal Portfolio Tracker',
-  description: 'A private, local-first personal net-worth dashboard.',
+  description: 'A private, local-first personal portfolio dashboard.',
   icons: { icon: '/favicon.svg' },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -19,7 +19,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           defaultTheme="system"
           disableTransitionOnChange
           enableSystem
-          storageKey="net-worth-theme"
+          storageKey="personal-portfolio-tracker-theme"
         >
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>

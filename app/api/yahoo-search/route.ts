@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
   const yahooResponse = await fetch(
     `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=8&newsCount=0`,
-    { headers: { 'User-Agent': 'Personal-Net-Worth-Dashboard/1.0' } },
+    { headers: { 'User-Agent': 'Personal-Portfolio-Tracker/1.0' } },
   );
   if (!yahooResponse.ok)
     return Response.json({ error: 'Yahoo Finance search is unavailable.' }, { status: 502 });

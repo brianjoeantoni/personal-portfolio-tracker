@@ -155,9 +155,9 @@ type WebMCPContext = {
   ) => void | Promise<void>;
 };
 
-const ASSET_KEY = "net-worth-assets-v1";
-const MARKET_KEY = "net-worth-market-v1";
-const REPORTING_CURRENCY_KEY = "net-worth-reporting-currency";
+const ASSET_KEY = "personal-portfolio-tracker-assets-v1";
+const MARKET_KEY = "personal-portfolio-tracker-market-v1";
+const REPORTING_CURRENCY_KEY = "personal-portfolio-tracker-reporting-currency";
 const colors = [
   "#d7f268",
   "#7b9e89",
@@ -1277,7 +1277,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
                     <div>
                       <p className="text-sm font-medium text-[#b6c6a9]">
-                        Total net worth
+                        Total portfolio value
                       </p>
                       <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
                         {formatReportingValue(

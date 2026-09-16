@@ -21,7 +21,7 @@ export function AppSidebar({ activeView, onNavigate, ...props }: React.Component
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
           <div className="grid size-8 place-items-center rounded-lg bg-[#283f34] text-[#d7f268]"><CircleDollarSignIcon size={17} /></div>
-          <div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">Net Worth</p><p className="truncate text-xs text-sidebar-foreground/65">Personal</p></div>
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">Portfolio Tracker</p><p className="truncate text-xs text-sidebar-foreground/65">Personal</p></div>
         </div>
       </SidebarHeader>
       <SidebarContent>
