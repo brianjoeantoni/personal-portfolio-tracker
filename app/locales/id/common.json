@@ -37,9 +37,7 @@
     "reportingCurrency": "Mata uang pelaporan",
     "reportingCurrencyDescription": "Digunakan untuk seluruh nilai dasbor dan tooltip harga.",
     "language": "Bahasa",
-    "languageDescription": "Digunakan untuk seluruh teks dan label aplikasi.",
-    "english": "English",
-    "indonesian": "Bahasa Indonesia"
+    "languageDescription": "Digunakan untuk seluruh teks dan label aplikasi."
   },
   "currency": {
     "IDR": "Rupiah Indonesia",

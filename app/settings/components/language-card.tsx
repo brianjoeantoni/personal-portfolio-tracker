@@ -33,12 +33,12 @@ export function LanguageCard({ value, onValueChange }: LanguageCardProps) {
             </p>
           </div>
           <Select value={value} onValueChange={(nextValue) => onValueChange(nextValue as Locale)}>
-            <SelectTrigger id="app-language" className="w-40 bg-[#eff3ed] dark:bg-[#273a2f]">
+            <SelectTrigger id="app-language" className="w-24 bg-[#eff3ed] dark:bg-[#273a2f]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="bottom" sideOffset={6} align="start" alignItemWithTrigger={false}>
-              <SelectItem value="en">{t("settings.english")}</SelectItem>
-              <SelectItem value="id">{t("settings.indonesian")}</SelectItem>
+              <SelectItem value="en">en</SelectItem>
+              <SelectItem value="id">id</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -37,9 +37,7 @@
     "reportingCurrency": "Reporting currency",
     "reportingCurrencyDescription": "Used for all dashboard values and price tooltips.",
     "language": "Language",
-    "languageDescription": "Used for all app text and labels.",
-    "english": "English",
-    "indonesian": "Bahasa Indonesia"
+    "languageDescription": "Used for all app text and labels."
   },
   "currency": {
     "IDR": "Indonesian rupiah",

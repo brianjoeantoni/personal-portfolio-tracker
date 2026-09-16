@@ -212,8 +212,8 @@ under `personal-portfolio-tracker-locale` and can be changed in **Settings**.
    keys unchanged.
 2. Import that JSON file in `app/lib/i18n.ts`, then add the locale code to the
    `locales` array and the `resources` object.
-3. Add the language option to `app/settings/components/language-card.tsx` and
-   its display label to each existing translation file.
+3. Add the locale code as an option in
+   `app/settings/components/language-card.tsx`.
 
 Every component reads the same `common` namespace, so adding a language does
 not require changing its UI components.
