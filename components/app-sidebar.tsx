@@ -1,6 +1,6 @@
 'use client'
 
-import { CircleDollarSignIcon, HardDriveIcon, LayoutDashboardIcon, WalletCardsIcon } from 'lucide-react'
+import { CircleDollarSignIcon, HardDriveIcon, LayoutDashboardIcon, SettingsIcon, WalletCardsIcon } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 
-type PortfolioView = 'overview' | 'assets'
+type PortfolioView = 'overview' | 'assets' | 'settings'
 
 export function AppSidebar({ activeView, onNavigate, ...props }: React.ComponentProps<typeof Sidebar> & { activeView: PortfolioView; onNavigate: (view: PortfolioView) => void }) {
   return (
@@ -38,6 +38,12 @@ export function AppSidebar({ activeView, onNavigate, ...props }: React.Component
               <SidebarMenuButton className="cursor-pointer" tooltip="Assets" isActive={activeView === 'assets'} onClick={() => onNavigate('assets')}>
                 <WalletCardsIcon />
                 <span>Assets</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton className="cursor-pointer" tooltip="Settings" isActive={activeView === 'settings'} onClick={() => onNavigate('settings')}>
+                <SettingsIcon />
+                <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

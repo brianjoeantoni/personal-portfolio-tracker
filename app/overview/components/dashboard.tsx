@@ -9,7 +9,6 @@ import {
   ArrowUpRight,
   Banknote,
   BriefcaseBusiness,
-  CircleDollarSign,
   Coins,
   Download,
   Landmark,
@@ -141,6 +140,7 @@ type WebMCPContext = {
 
 const ASSET_KEY = "net-worth-assets-v1";
 const MARKET_KEY = "net-worth-market-v1";
+const REPORTING_CURRENCY_KEY = "net-worth-reporting-currency";
 const colors = [
   "#d7f268",
   "#7b9e89",
@@ -704,7 +704,7 @@ function AssetTable({
   );
 }
 
-type DashboardView = "overview" | "assets";
+type DashboardView = "overview" | "assets" | "settings";
 
 export function Dashboard({ view }: { view: DashboardView }) {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -713,6 +713,8 @@ export function Dashboard({ view }: { view: DashboardView }) {
   const [allocationView, setAllocationView] = useState<"asset" | "category">(
     "asset",
   );
+  const [reportingCurrency, setReportingCurrency] = useState<Currency>("IDR");
+  const [reportingCurrencyReady, setReportingCurrencyReady] = useState(false);
   const [editing, setEditing] = useState<Asset | undefined>();
   const [formOpen, setFormOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<PortfolioBackup>();
@@ -738,6 +740,18 @@ export function Dashboard({ view }: { view: DashboardView }) {
       setHydrated(true);
     }
   }, []);
+  useEffect(() => {
+    const savedCurrency = localStorage.getItem(REPORTING_CURRENCY_KEY);
+    if (savedCurrency === "IDR" || savedCurrency === "USD") {
+      setReportingCurrency(savedCurrency);
+    }
+    setReportingCurrencyReady(true);
+  }, []);
+  useEffect(() => {
+    if (reportingCurrencyReady) {
+      localStorage.setItem(REPORTING_CURRENCY_KEY, reportingCurrency);
+    }
+  }, [reportingCurrency, reportingCurrencyReady]);
   useEffect(() => {
     assetsRef.current = assets;
   }, [assets]);
@@ -946,6 +960,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
     .filter((item) => item.value > 0);
   const chartData =
     allocationView === "asset" ? assetChartData : categoryChartData;
+  const formatReportingValue = (value: number) => {
+    if (reportingCurrency === "IDR") return formatIDR(value);
+    if (!market.usdIdr) return "USD rate unavailable";
+    return formatMoney(value / market.usdIdr.price, "USD");
+  };
   const summary = [
     {
       label: "Invested assets",
@@ -974,7 +993,13 @@ export function Dashboard({ view }: { view: DashboardView }) {
       <AppSidebar
         activeView={view}
         onNavigate={(nextView) =>
-          router.push(nextView === "assets" ? "/assets" : "/overview")
+          router.push(
+            nextView === "assets"
+              ? "/assets"
+              : nextView === "settings"
+                ? "/settings"
+                : "/overview",
+          )
         }
       />
       <SidebarInset>
@@ -989,7 +1014,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    {view === "overview" ? "Portfolio overview" : "All assets"}
+                    {view === "overview"
+                      ? "Portfolio overview"
+                      : view === "assets"
+                        ? "All assets"
+                        : "Settings"}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -1046,20 +1075,20 @@ export function Dashboard({ view }: { view: DashboardView }) {
           </div>
           <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
             <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#283f34] text-[#d7f268]">
-                  <CircleDollarSign size={21} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#678072]">
-                    Personal finance
-                  </p>
-                  <h1 className="text-xl font-semibold tracking-tight">
-                    Net worth
-                  </h1>
-                </div>
+              <div>
+                <p className="text-base font-medium text-[#678072]">
+                  Personal finance
+                </p>
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  {view === "overview"
+                    ? "Overview"
+                    : view === "assets"
+                      ? "Assets"
+                      : "Settings"}
+                </h1>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {view !== "settings" && (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div id="market-data" className="text-sm text-[#678072]">
                   <span
                     className={`mr-2 inline-block h-2 w-2 rounded-full ${allStale ? "bg-amber-400" : hasPrices ? "bg-emerald-500" : "bg-[#a9b7ae]"}`}
@@ -1086,14 +1115,55 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   <Plus />
                   Add asset
                 </Button>
-              </div>
+                </div>
+              )}
             </header>
             {importError && (
               <p role="alert" className="-mt-5 mb-5 text-sm text-destructive">
                 {importError}
               </p>
             )}
-            {assets.length === 0 ? (
+            {view === "settings" ? (
+              <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between gap-6 px-6 py-5">
+                    <div>
+                      <Label
+                        htmlFor="reporting-currency"
+                        className="font-semibold"
+                      >
+                        Reporting currency
+                      </Label>
+                      <p className="mt-1 text-sm text-[#718174]">
+                        Used for allocation values and price tooltips.
+                      </p>
+                    </div>
+                    <Select
+                      value={reportingCurrency}
+                      onValueChange={(value) =>
+                        setReportingCurrency(value as Currency)
+                      }
+                    >
+                      <SelectTrigger
+                        id="reporting-currency"
+                        className="w-24 bg-[#eff3ed] dark:bg-[#273a2f]"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent
+                        side="bottom"
+                        sideOffset={6}
+                        align="start"
+                        alignItemWithTrigger={false}
+                      >
+                        <SelectItem value="IDR">IDR</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : assets.length === 0 ? (
               <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
                 <CardContent className="flex min-h-[470px] flex-col items-center justify-center px-6 text-center">
                   <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-[#eef3e9] text-[#486451]">
@@ -1120,6 +1190,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
               </Card>
             ) : view === "assets" ? (
               <AssetTable
+              compact
                 rows={assetRows}
                 total={total}
                 market={market}
@@ -1240,7 +1311,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                           variant="secondary"
                           className="bg-[#eff3ed] text-[#486451] dark:bg-[#273a2f] dark:text-[#c8d9cb]"
                         >
-                          IDR
+                          {reportingCurrency}
                         </Badge>
                       </div>
                       {chartData.length ? (
@@ -1263,7 +1334,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                                 </Pie>
                                 <Tooltip
                                   formatter={(value) =>
-                                    formatIDR(Number(value ?? 0))
+                                    formatReportingValue(Number(value ?? 0))
                                   }
                                   wrapperStyle={{ zIndex: 20 }}
                                   contentStyle={{
