@@ -76,12 +76,22 @@ import {
 } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
 import {
+  assetCurrencies,
+  assetCurrencyCodes,
+  baseCurrency,
+  currencies,
   convertFromIdr,
+  convertToIdr,
+  defaultAssetCurrency,
+  defaultReportingCurrency,
   formatCurrency,
-  isCurrency,
+  isAssetCurrency,
+  isReportingCurrency,
+  idrRateFor,
   reportingCurrencies,
   reportingCurrencyLabel,
   type Currency,
+  type FxRates,
 } from "@/app/lib/currency";
 
 type AssetType = "stock" | "gold" | "cash" | "custom";
@@ -114,7 +124,7 @@ type Quote = {
   source: string;
 };
 type MarketData = {
-  usdIdr?: Quote;
+  fxRates: Partial<Record<Currency, Quote>>;
   gold?: Quote;
   stocks: Record<string, Quote>;
 };
@@ -130,7 +140,7 @@ type YahooInstrument = {
   exchange: string;
   currency: Currency;
 };
-type ExchangeRateResponse = { rates?: { IDR?: number } };
+type ExchangeRateResponse = { rates?: Partial<Record<Currency, number>> };
 type WebMCPContext = {
   registerTool: (
     tool: {
@@ -165,7 +175,32 @@ const queryClient = new QueryClient({
     },
   },
 });
-const emptyMarket: MarketData = { stocks: {} };
+const emptyMarket: MarketData = { fxRates: {}, stocks: {} };
+
+function normalizeMarketData(value: unknown): MarketData {
+  if (!value || typeof value !== "object") return emptyMarket;
+  const market = value as Partial<MarketData> & { usdIdr?: Quote };
+  return {
+    fxRates:
+      market.fxRates && typeof market.fxRates === "object"
+        ? market.fxRates
+        : market.usdIdr
+          ? { USD: market.usdIdr }
+          : {},
+    gold: market.gold,
+    stocks:
+      market.stocks && typeof market.stocks === "object" ? market.stocks : {},
+  };
+}
+
+function marketFxRates(market: MarketData): FxRates {
+  return Object.fromEntries(
+    Object.entries(market.fxRates).map(([currency, quote]) => [
+      currency,
+      quote.price,
+    ]),
+  ) as FxRates;
+}
 
 function parsePortfolioBackup(value: unknown): PortfolioBackup {
   if (!value || typeof value !== "object")
@@ -181,7 +216,7 @@ function parsePortfolioBackup(value: unknown): PortfolioBackup {
       typeof item.id === "string" &&
       typeof item.name === "string" &&
       validTypes.includes(item.type as AssetType) &&
-      (item.currency === "IDR" || item.currency === "USD")
+      isAssetCurrency(item.currency)
     );
   });
   if (!validAssets) throw new Error("This backup contains invalid assets.");
@@ -191,7 +226,7 @@ function parsePortfolioBackup(value: unknown): PortfolioBackup {
     "stocks" in backup.market &&
     backup.market.stocks &&
     typeof backup.market.stocks === "object"
-      ? (backup.market as MarketData)
+      ? normalizeMarketData(backup.market)
       : undefined;
   return {
     version: 1,
@@ -205,7 +240,7 @@ function parsePortfolioBackup(value: unknown): PortfolioBackup {
 }
 
 function formatIDR(value: number) {
-  return formatCurrency(value, "IDR");
+  return formatCurrency(value, baseCurrency);
 }
 function formatMoney(value: number, currency: Currency) {
   return formatCurrency(value, currency);
@@ -251,23 +286,35 @@ async function searchYahooInstruments(
 
 async function fetchMarketData(assets: Asset[]): Promise<MarketData> {
   const now = new Date().toISOString();
-  const next: MarketData = { stocks: {} };
-  const fx = await fetch("https://open.er-api.com/v6/latest/USD")
+  const next: MarketData = { fxRates: {}, stocks: {} };
+  const fxRates = await fetch("https://open.er-api.com/v6/latest/IDR")
     .then(async (response) => {
       if (!response.ok) throw new Error("FX unavailable");
       const data = (await response.json()) as ExchangeRateResponse;
-      if (!data?.rates?.IDR) throw new Error("IDR rate unavailable");
-      return data.rates.IDR as number;
+      return Object.fromEntries(
+        currencies
+          .filter((currency) => currency.code !== baseCurrency)
+          .flatMap((currency) => {
+            const unitsPerIdr = data.rates?.[currency.code];
+            return unitsPerIdr && unitsPerIdr > 0
+              ? [
+                  [
+                    currency.code,
+                    {
+                      price: 1 / unitsPerIdr,
+                      currency: baseCurrency,
+                      updatedAt: now,
+                      isStale: false,
+                      source: "ExchangeRate-API",
+                    },
+                  ],
+                ]
+              : [];
+          }),
+      ) as Partial<Record<Currency, Quote>>;
     })
-    .catch(() => undefined);
-  if (fx)
-    next.usdIdr = {
-      price: fx,
-      currency: "IDR",
-      updatedAt: now,
-      isStale: false,
-      source: "ExchangeRate-API",
-    };
+    .catch(() => ({}));
+  next.fxRates = fxRates;
   const stocks = assets.filter(
     (asset) => asset.type === "stock" && asset.symbol,
   );
@@ -283,12 +330,13 @@ async function fetchMarketData(assets: Asset[]): Promise<MarketData> {
         source: "Yahoo Finance",
       };
   });
-  if (assets.some((asset) => asset.type === "gold") && fx)
+  const usdIdr = idrRateFor("USD", marketFxRates(next));
+  if (assets.some((asset) => asset.type === "gold") && usdIdr)
     try {
       const spot = await yahooPrice("GC=F");
       next.gold = {
-        price: (spot.price * fx) / 31.1034768,
-        currency: "IDR",
+        price: (spot.price * usdIdr) / 31.1034768,
+        currency: baseCurrency,
         updatedAt: now,
         isStale: false,
         source: "Gold futures reference",
@@ -300,6 +348,12 @@ async function fetchMarketData(assets: Asset[]): Promise<MarketData> {
 }
 
 function mergeMarket(previous: MarketData, incoming: MarketData): MarketData {
+  const staleFxRates = Object.fromEntries(
+    Object.entries(previous.fxRates).map(([currency, quote]) => [
+      currency,
+      { ...quote, isStale: true },
+    ]),
+  ) as Partial<Record<Currency, Quote>>;
   const staleStocks = Object.fromEntries(
     Object.entries(previous.stocks).map(([id, quote]) => [
       id,
@@ -307,9 +361,7 @@ function mergeMarket(previous: MarketData, incoming: MarketData): MarketData {
     ]),
   );
   return {
-    usdIdr:
-      incoming.usdIdr ??
-      (previous.usdIdr ? { ...previous.usdIdr, isStale: true } : undefined),
+    fxRates: { ...staleFxRates, ...incoming.fxRates },
     gold:
       incoming.gold ??
       (previous.gold ? { ...previous.gold, isStale: true } : undefined),
@@ -319,20 +371,16 @@ function mergeMarket(previous: MarketData, incoming: MarketData): MarketData {
 function quoteFor(asset: Asset, market: MarketData) {
   if (asset.type === "stock") return market.stocks[asset.id];
   if (asset.type === "gold") return market.gold;
-  if (asset.currency === "USD") return market.usdIdr;
-  return undefined;
+  return market.fxRates[asset.currency];
 }
 function assetValue(asset: Asset, market: MarketData) {
+  const fxRates = marketFxRates(market);
   if (asset.type === "cash" || asset.type === "custom")
-    return asset.currency === "IDR"
-      ? (asset.value ?? 0)
-      : (asset.value ?? 0) * (market.usdIdr?.price ?? 0);
+    return convertToIdr(asset.value ?? 0, asset.currency, fxRates) ?? 0;
   const quote = quoteFor(asset, market);
   if (!quote) return 0;
   const quantity = asset.quantity ?? 0;
-  return asset.type === "gold" || quote.currency === "IDR"
-    ? quantity * quote.price
-    : quantity * quote.price * (market.usdIdr?.price ?? 0);
+  return convertToIdr(quantity * quote.price, quote.currency, fxRates) ?? 0;
 }
 function formatReportingValue(
   value: number,
@@ -342,7 +390,7 @@ function formatReportingValue(
   const convertedValue = convertFromIdr(
     value,
     reportingCurrency,
-    market.usdIdr ? { USD: market.usdIdr.price } : {},
+    marketFxRates(market),
   );
   return convertedValue === undefined
     ? `${reportingCurrency} rate unavailable`
@@ -367,7 +415,9 @@ function AssetForm({
 }) {
   const [type, setType] = useState<AssetType>(asset?.type ?? "stock");
   const [name, setName] = useState(asset?.name ?? "");
-  const [currency, setCurrency] = useState<Currency>(asset?.currency ?? "IDR");
+  const [currency, setCurrency] = useState<Currency>(
+    asset?.currency ?? defaultAssetCurrency,
+  );
   const [selectedInstrument, setSelectedInstrument] = useState<
     YahooInstrument | undefined
   >(
@@ -428,7 +478,9 @@ function AssetForm({
             currency: selectedInstrument!.currency,
           }
         : {}),
-      ...(type === "gold" ? { quantity: Number(amount), currency: "IDR" } : {}),
+      ...(type === "gold"
+        ? { quantity: Number(amount), currency: baseCurrency }
+        : {}),
       ...(type === "cash" || type === "custom"
         ? { value: Number(amount) }
         : {}),
@@ -570,8 +622,11 @@ function AssetForm({
               align="start"
               alignItemWithTrigger={false}
             >
-              <SelectItem value="IDR">IDR</SelectItem>
-              <SelectItem value="USD">USD</SelectItem>
+              {assetCurrencies.map((currency) => (
+                <SelectItem key={currency.code} value={currency.code}>
+                  {currency.code}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -730,7 +785,8 @@ export function Dashboard({ view }: { view: DashboardView }) {
   const [allocationView, setAllocationView] = useState<"asset" | "category">(
     "asset",
   );
-  const [reportingCurrency, setReportingCurrency] = useState<Currency>("IDR");
+  const [reportingCurrency, setReportingCurrency] =
+    useState<Currency>(defaultReportingCurrency);
   const [reportingCurrencyReady, setReportingCurrencyReady] = useState(false);
   const [editing, setEditing] = useState<Asset | undefined>();
   const [formOpen, setFormOpen] = useState(false);
@@ -749,8 +805,10 @@ export function Dashboard({ view }: { view: DashboardView }) {
     try {
       setAssets(JSON.parse(localStorage.getItem(ASSET_KEY) || "[]"));
       setMarket(
-        JSON.parse(
-          localStorage.getItem(MARKET_KEY) || JSON.stringify(emptyMarket),
+        normalizeMarketData(
+          JSON.parse(
+            localStorage.getItem(MARKET_KEY) || JSON.stringify(emptyMarket),
+          ),
         ),
       );
     } finally {
@@ -759,7 +817,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
   }, []);
   useEffect(() => {
     const savedCurrency = localStorage.getItem(REPORTING_CURRENCY_KEY);
-    if (isCurrency(savedCurrency)) {
+    if (isReportingCurrency(savedCurrency)) {
       setReportingCurrency(savedCurrency);
     }
     setReportingCurrencyReady(true);
@@ -794,7 +852,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
           properties: {
             type: { enum: ["stock", "gold", "cash", "custom"] },
             name: { type: "string" },
-            currency: { enum: ["IDR", "USD"] },
+            currency: { enum: assetCurrencyCodes },
             amount: { type: "number", exclusiveMinimum: 0 },
             symbol: { type: "string" },
           },
@@ -813,7 +871,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
           if (
             !value.type ||
             !value.name?.trim() ||
-            !value.currency ||
+            !isAssetCurrency(value.currency) ||
             !Number.isFinite(value.amount) ||
             value.amount! <= 0 ||
             (value.type === "stock" && !value.symbol?.trim())
@@ -825,7 +883,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
             id: crypto.randomUUID(),
             type: value.type,
             name: value.name.trim(),
-            currency: value.type === "gold" ? "IDR" : value.currency,
+            currency: value.type === "gold" ? baseCurrency : value.currency,
             ...(value.type === "stock"
               ? {
                   symbol: value.symbol!.trim().toUpperCase(),
@@ -868,8 +926,9 @@ export function Dashboard({ view }: { view: DashboardView }) {
     [assets, market],
   );
   const total = assetRows.reduce((sum, row) => sum + row.value, 0);
+  const usdIdrQuote = market.fxRates.USD;
   const updatedAt = [
-    market.usdIdr?.updatedAt,
+    ...Object.values(market.fxRates).map((quote) => quote.updatedAt),
     market.gold?.updatedAt,
     ...Object.values(market.stocks).map((quote) => quote.updatedAt),
   ]
@@ -879,7 +938,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
   const hasPrices = Boolean(updatedAt);
   const allStale =
     hasPrices &&
-    [market.usdIdr, market.gold, ...Object.values(market.stocks)]
+    [...Object.values(market.fxRates), market.gold, ...Object.values(market.stocks)]
       .filter(Boolean)
       .every((quote) => quote!.isStale);
   function saveAsset(asset: Asset) {
@@ -1228,8 +1287,8 @@ export function Dashboard({ view }: { view: DashboardView }) {
                         )}
                       </p>
                       <p className="mt-3 text-sm text-[#d1ddc8]">
-                        {market.usdIdr
-                          ? `${market.usdIdr.isStale ? "Last known USD/IDR" : "USD/IDR"} | USD 1 = ${formatIDR(market.usdIdr.price)}`
+                        {usdIdrQuote
+                          ? `${usdIdrQuote.isStale ? "Last known USD/IDR" : "USD/IDR"} | USD 1 = ${formatIDR(usdIdrQuote.price)}`
                           : "USD/IDR rate unavailable"}
                       </p>
                       <p className="mt-4 flex items-center gap-1.5 text-sm text-[#d1ddc8]">

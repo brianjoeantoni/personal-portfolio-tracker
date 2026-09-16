@@ -7,7 +7,7 @@ import './globals.css';
 const geist = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Personal Portfolio Tracker',
-  description: 'A private, local-first personal net-worth dashboard in IDR.',
+  description: 'A private, local-first personal net-worth dashboard.',
   icons: { icon: '/favicon.svg' },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -1,3 +1,5 @@
+import { isAssetCurrency } from '@/app/lib/currency';
+
 type YahooQuote = {
   symbol?: string;
   longname?: string;
@@ -21,19 +23,24 @@ export async function GET(request: Request) {
 
   const data = (await yahooResponse.json()) as YahooSearchResponse;
   const instruments = (data?.quotes ?? [])
-    .filter(
-      (quote: YahooQuote) =>
-        quote.symbol &&
-        ['EQUITY', 'ETF', 'MUTUALFUND'].includes(quote.quoteType ?? ''),
-    )
-    .slice(0, 8)
-    .map((quote: YahooQuote) => ({
-      symbol: quote.symbol,
-      name: quote.longname ?? quote.shortname ?? quote.symbol,
-      exchange: quote.exchange ?? 'Market data',
-      currency:
-        quote.currency === 'IDR' || quote.exchange === 'JKT' ? 'IDR' : 'USD',
-    }));
+    .flatMap((quote: YahooQuote) => {
+      if (
+        !quote.symbol ||
+        !['EQUITY', 'ETF', 'MUTUALFUND'].includes(quote.quoteType ?? '')
+      )
+        return [];
+      const currency = quote.exchange === 'JKT' ? 'IDR' : quote.currency;
+      if (!isAssetCurrency(currency)) return [];
+      return [
+        {
+          symbol: quote.symbol,
+          name: quote.longname ?? quote.shortname ?? quote.symbol,
+          exchange: quote.exchange ?? 'Market data',
+          currency,
+        },
+      ];
+    })
+    .slice(0, 8);
 
   return Response.json(instruments, {
     headers: { 'Cache-Control': 'public, max-age=300' },

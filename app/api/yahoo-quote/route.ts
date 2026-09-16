@@ -1,3 +1,5 @@
+import { isAssetCurrency } from '@/app/lib/currency';
+
 type YahooChartResponse = {
   chart?: {
     result?: Array<{
@@ -28,8 +30,12 @@ export async function GET(request: Request) {
   if (!meta || !price)
     return Response.json({ error: 'No quote was returned.' }, { status: 404 });
 
+  const currency = meta.currency ?? 'USD';
+  if (!isAssetCurrency(currency))
+    return Response.json({ error: 'This quote uses an unsupported currency.' }, { status: 422 });
+
   return Response.json(
-    { price, currency: meta.currency === 'IDR' ? 'IDR' : 'USD' },
+    { price, currency },
     { headers: { 'Cache-Control': 'public, max-age=300' } },
   );
 }
