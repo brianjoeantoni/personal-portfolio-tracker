@@ -1,56 +1,59 @@
-'use client';
+"use client";
 
 import {
   QueryClient,
   QueryClientProvider,
   useQuery,
-} from '@tanstack/react-query';
+} from "@tanstack/react-query";
 import {
   ArrowUpRight,
   Banknote,
   BriefcaseBusiness,
   CircleDollarSign,
   Coins,
+  Download,
   Landmark,
   MoreHorizontal,
   Pencil,
   Plus,
   RefreshCw,
+  Settings,
   ShieldCheck,
   Moon,
   Sun,
   Trash2,
   TrendingUp,
+  Upload,
   WalletCards,
-} from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTheme } from 'next-themes';
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Combobox,
   ComboboxContent,
@@ -58,36 +61,36 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from '@/components/ui/combobox';
-import { AppSidebar } from '@/components/app-sidebar';
+} from "@/components/ui/combobox";
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+} from "@/components/ui/breadcrumb";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from '@/components/ui/sidebar';
-import { useRouter } from 'next/navigation';
+} from "@/components/ui/sidebar";
+import { useRouter } from "next/navigation";
 
-type AssetType = 'stock' | 'gold' | 'cash' | 'custom';
+type AssetType = "stock" | "gold" | "cash" | "custom";
 
 const assetTypeLabels: Record<AssetType, string> = {
-  stock: 'Stock / ETF',
-  gold: 'Gold',
-  cash: 'Cash / bank balance',
-  custom: 'Custom asset',
+  stock: "Stock / ETF",
+  gold: "Gold",
+  cash: "Cash / bank balance",
+  custom: "Custom asset",
 };
 
 const allocationViewLabels = {
-  asset: 'Asset',
-  category: 'Category',
+  asset: "Asset",
+  category: "Category",
 } as const;
-type Currency = 'IDR' | 'USD';
+type Currency = "IDR" | "USD";
 type Asset = {
   id: string;
   type: AssetType;
@@ -108,6 +111,12 @@ type MarketData = {
   usdIdr?: Quote;
   gold?: Quote;
   stocks: Record<string, Quote>;
+};
+type PortfolioBackup = {
+  version: 1;
+  exportedAt: string;
+  assets: Asset[];
+  market?: MarketData;
 };
 type YahooInstrument = {
   symbol: string;
@@ -130,15 +139,15 @@ type WebMCPContext = {
   ) => void | Promise<void>;
 };
 
-const ASSET_KEY = 'net-worth-assets-v1';
-const MARKET_KEY = 'net-worth-market-v1';
+const ASSET_KEY = "net-worth-assets-v1";
+const MARKET_KEY = "net-worth-market-v1";
 const colors = [
-  '#d7f268',
-  '#7b9e89',
-  '#f3b56b',
-  '#a9c7e8',
-  '#c9b6f1',
-  '#f3a6b3',
+  "#d7f268",
+  "#7b9e89",
+  "#f3b56b",
+  "#a9c7e8",
+  "#c9b6f1",
+  "#f3a6b3",
 ];
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -151,37 +160,74 @@ const queryClient = new QueryClient({
 });
 const emptyMarket: MarketData = { stocks: {} };
 
+function parsePortfolioBackup(value: unknown): PortfolioBackup {
+  if (!value || typeof value !== "object")
+    throw new Error("Choose a valid portfolio backup file.");
+  const backup = value as Partial<PortfolioBackup>;
+  if (!Array.isArray(backup.assets))
+    throw new Error("This file does not contain a portfolio.");
+  const validTypes: AssetType[] = ["stock", "gold", "cash", "custom"];
+  const validAssets = backup.assets.every((asset) => {
+    if (!asset || typeof asset !== "object") return false;
+    const item = asset as Partial<Asset>;
+    return (
+      typeof item.id === "string" &&
+      typeof item.name === "string" &&
+      validTypes.includes(item.type as AssetType) &&
+      (item.currency === "IDR" || item.currency === "USD")
+    );
+  });
+  if (!validAssets) throw new Error("This backup contains invalid assets.");
+  const market =
+    backup.market &&
+    typeof backup.market === "object" &&
+    "stocks" in backup.market &&
+    backup.market.stocks &&
+    typeof backup.market.stocks === "object"
+      ? (backup.market as MarketData)
+      : undefined;
+  return {
+    version: 1,
+    exportedAt:
+      typeof backup.exportedAt === "string"
+        ? backup.exportedAt
+        : new Date().toISOString(),
+    assets: backup.assets as Asset[],
+    market,
+  };
+}
+
 function formatIDR(value: number) {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
     maximumFractionDigits: 0,
   }).format(value || 0);
 }
 function formatMoney(value: number, currency: Currency) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
     currency,
-    maximumFractionDigits: currency === 'IDR' ? 0 : 2,
+    maximumFractionDigits: currency === "IDR" ? 0 : 2,
   }).format(value || 0);
 }
 function formatNumber(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(
     value || 0,
   );
 }
 function timeLabel(iso?: string) {
   return iso
-    ? new Intl.DateTimeFormat('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Jakarta',
-        timeZoneName: 'short',
+    ? new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Jakarta",
+        timeZoneName: "short",
       }).format(new Date(iso))
-    : 'No market data yet';
+    : "No market data yet";
 }
 
 async function yahooPrice(
@@ -200,53 +246,53 @@ async function searchYahooInstruments(
   const response = await fetch(
     `/api/yahoo-search?q=${encodeURIComponent(query)}`,
   );
-  if (!response.ok) throw new Error('Search unavailable');
+  if (!response.ok) throw new Error("Search unavailable");
   return response.json();
 }
 
 async function fetchMarketData(assets: Asset[]): Promise<MarketData> {
   const now = new Date().toISOString();
   const next: MarketData = { stocks: {} };
-  const fx = await fetch('https://open.er-api.com/v6/latest/USD')
+  const fx = await fetch("https://open.er-api.com/v6/latest/USD")
     .then(async (response) => {
-      if (!response.ok) throw new Error('FX unavailable');
+      if (!response.ok) throw new Error("FX unavailable");
       const data = (await response.json()) as ExchangeRateResponse;
-      if (!data?.rates?.IDR) throw new Error('IDR rate unavailable');
+      if (!data?.rates?.IDR) throw new Error("IDR rate unavailable");
       return data.rates.IDR as number;
     })
     .catch(() => undefined);
   if (fx)
     next.usdIdr = {
       price: fx,
-      currency: 'IDR',
+      currency: "IDR",
       updatedAt: now,
       isStale: false,
-      source: 'ExchangeRate-API',
+      source: "ExchangeRate-API",
     };
   const stocks = assets.filter(
-    (asset) => asset.type === 'stock' && asset.symbol,
+    (asset) => asset.type === "stock" && asset.symbol,
   );
   const results = await Promise.allSettled(
     stocks.map((asset) => yahooPrice(asset.symbol!)),
   );
   results.forEach((result, index) => {
-    if (result.status === 'fulfilled')
+    if (result.status === "fulfilled")
       next.stocks[stocks[index].id] = {
         ...result.value,
         updatedAt: now,
         isStale: false,
-        source: 'Yahoo Finance',
+        source: "Yahoo Finance",
       };
   });
-  if (assets.some((asset) => asset.type === 'gold') && fx)
+  if (assets.some((asset) => asset.type === "gold") && fx)
     try {
-      const spot = await yahooPrice('GC=F');
+      const spot = await yahooPrice("GC=F");
       next.gold = {
         price: (spot.price * fx) / 31.1034768,
-        currency: 'IDR',
+        currency: "IDR",
         updatedAt: now,
         isStale: false,
-        source: 'Gold futures reference',
+        source: "Gold futures reference",
       };
     } catch {
       /* preserve cached reference */
@@ -272,28 +318,28 @@ function mergeMarket(previous: MarketData, incoming: MarketData): MarketData {
   };
 }
 function quoteFor(asset: Asset, market: MarketData) {
-  if (asset.type === 'stock') return market.stocks[asset.id];
-  if (asset.type === 'gold') return market.gold;
-  if (asset.currency === 'USD') return market.usdIdr;
+  if (asset.type === "stock") return market.stocks[asset.id];
+  if (asset.type === "gold") return market.gold;
+  if (asset.currency === "USD") return market.usdIdr;
   return undefined;
 }
 function assetValue(asset: Asset, market: MarketData) {
-  if (asset.type === 'cash' || asset.type === 'custom')
-    return asset.currency === 'IDR'
+  if (asset.type === "cash" || asset.type === "custom")
+    return asset.currency === "IDR"
       ? (asset.value ?? 0)
       : (asset.value ?? 0) * (market.usdIdr?.price ?? 0);
   const quote = quoteFor(asset, market);
   if (!quote) return 0;
   const quantity = asset.quantity ?? 0;
-  return asset.type === 'gold' || quote.currency === 'IDR'
+  return asset.type === "gold" || quote.currency === "IDR"
     ? quantity * quote.price
     : quantity * quote.price * (market.usdIdr?.price ?? 0);
 }
 function AssetIcon({ type }: { type: AssetType }) {
   const props = { size: 17, strokeWidth: 1.8 };
-  if (type === 'stock') return <TrendingUp {...props} />;
-  if (type === 'gold') return <Coins {...props} />;
-  if (type === 'cash') return <Landmark {...props} />;
+  if (type === "stock") return <TrendingUp {...props} />;
+  if (type === "gold") return <Coins {...props} />;
+  if (type === "cash") return <Landmark {...props} />;
   return <BriefcaseBusiness {...props} />;
 }
 
@@ -306,45 +352,45 @@ function AssetForm({
   onSave: (asset: Asset) => void;
   onClose: () => void;
 }) {
-  const [type, setType] = useState<AssetType>(asset?.type ?? 'stock');
-  const [name, setName] = useState(asset?.name ?? '');
-  const [currency, setCurrency] = useState<Currency>(asset?.currency ?? 'IDR');
+  const [type, setType] = useState<AssetType>(asset?.type ?? "stock");
+  const [name, setName] = useState(asset?.name ?? "");
+  const [currency, setCurrency] = useState<Currency>(asset?.currency ?? "IDR");
   const [selectedInstrument, setSelectedInstrument] = useState<
     YahooInstrument | undefined
   >(
-    asset?.type === 'stock' && asset.symbol
+    asset?.type === "stock" && asset.symbol
       ? {
           symbol: asset.symbol,
           name: asset.name,
-          exchange: 'Saved holding',
+          exchange: "Saved holding",
           currency: asset.currency,
         }
       : undefined,
   );
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<YahooInstrument[]>([]);
-  const [searchState, setSearchState] = useState<'idle' | 'loading' | 'error'>(
-    'idle',
+  const [searchState, setSearchState] = useState<"idle" | "loading" | "error">(
+    "idle",
   );
   const [amount, setAmount] = useState(
-    String(asset?.quantity ?? asset?.value ?? ''),
+    String(asset?.quantity ?? asset?.value ?? ""),
   );
   useEffect(() => {
-    if (type !== 'stock' || searchQuery.trim().length < 2) {
+    if (type !== "stock" || searchQuery.trim().length < 2) {
       setSearchResults([]);
-      setSearchState('idle');
+      setSearchState("idle");
       return;
     }
     const timeout = window.setTimeout(() => {
-      setSearchState('loading');
+      setSearchState("loading");
       searchYahooInstruments(searchQuery)
         .then((results) => {
           setSearchResults(results);
-          setSearchState('idle');
+          setSearchState("idle");
         })
         .catch(() => {
           setSearchResults([]);
-          setSearchState('error');
+          setSearchState("error");
         });
     }, 350);
     return () => window.clearTimeout(timeout);
@@ -353,36 +399,36 @@ function AssetForm({
     event.preventDefault();
     if (
       !Number(amount) ||
-      (type === 'stock' && !selectedInstrument) ||
-      (type !== 'stock' && !name.trim())
+      (type === "stock" && !selectedInstrument) ||
+      (type !== "stock" && !name.trim())
     )
       return;
     onSave({
       id: asset?.id ?? crypto.randomUUID(),
       type,
-      name: type === 'stock' ? selectedInstrument!.name : name.trim(),
+      name: type === "stock" ? selectedInstrument!.name : name.trim(),
       currency,
-      ...(type === 'stock'
+      ...(type === "stock"
         ? {
             symbol: selectedInstrument!.symbol,
             quantity: Number(amount),
             currency: selectedInstrument!.currency,
           }
         : {}),
-      ...(type === 'gold' ? { quantity: Number(amount), currency: 'IDR' } : {}),
-      ...(type === 'cash' || type === 'custom'
+      ...(type === "gold" ? { quantity: Number(amount), currency: "IDR" } : {}),
+      ...(type === "cash" || type === "custom"
         ? { value: Number(amount) }
         : {}),
     });
   }
   const amountLabel =
-    type === 'stock'
-      ? 'Quantity'
-      : type === 'gold'
-        ? 'Weight (grams)'
-        : type === 'cash'
-          ? 'Balance'
-          : 'Current value';
+    type === "stock"
+      ? "Quantity"
+      : type === "gold"
+        ? "Weight (grams)"
+        : type === "cash"
+          ? "Balance"
+          : "Current value";
   return (
     <form className="space-y-5" onSubmit={submit}>
       <div className="space-y-2">
@@ -410,7 +456,7 @@ function AssetForm({
           </SelectContent>
         </Select>
       </div>
-      {type !== 'stock' && (
+      {type !== "stock" && (
         <div className="space-y-2">
           <Label htmlFor="asset-name">Name</Label>
           <Input
@@ -419,16 +465,16 @@ function AssetForm({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder={
-              type === 'gold'
-                ? 'UBS Gold'
-                : type === 'cash'
-                  ? 'BCA'
-                  : 'e.g. Vanguard S&P 500 ETF'
+              type === "gold"
+                ? "UBS Gold"
+                : type === "cash"
+                  ? "BCA"
+                  : "e.g. Vanguard S&P 500 ETF"
             }
           />
         </div>
       )}
-      {type === 'stock' && (
+      {type === "stock" && (
         <div className="space-y-2">
           <Label>Stock / ETF</Label>
           <Combobox
@@ -466,13 +512,13 @@ function AssetForm({
                   </ComboboxItem>
                 ))}
                 <ComboboxEmpty>
-                  {searchState === 'loading'
-                    ? 'Searching Yahoo Finance…'
-                    : searchState === 'error'
-                      ? 'Search unavailable. Try again.'
+                  {searchState === "loading"
+                    ? "Searching Yahoo Finance…"
+                    : searchState === "error"
+                      ? "Search unavailable. Try again."
                       : searchQuery.trim().length < 2
-                        ? 'Type at least 2 characters.'
-                        : 'No matching stock or ETF found.'}
+                        ? "Type at least 2 characters."
+                        : "No matching stock or ETF found."}
                 </ComboboxEmpty>
               </ComboboxList>
             </ComboboxContent>
@@ -495,7 +541,7 @@ function AssetForm({
           placeholder="0"
         />
       </div>
-      {type !== 'gold' && type !== 'stock' && (
+      {type !== "gold" && type !== "stock" && (
         <div className="space-y-2">
           <Label>Currency</Label>
           <Select
@@ -525,7 +571,7 @@ function AssetForm({
           type="submit"
           className="bg-[#283f34] text-white hover:bg-[#1e3028]"
         >
-          {asset ? 'Save changes' : 'Add asset'}
+          {asset ? "Save changes" : "Add asset"}
         </Button>
       </div>
     </form>
@@ -553,12 +599,12 @@ function AssetTable({
         <div className="flex items-center justify-between px-6 py-5">
           <div>
             <h2 className="font-semibold">
-              {compact ? 'Your assets' : 'All assets'}
+              {compact ? "Your assets" : "All assets"}
             </h2>
             <p className="mt-1 text-sm text-[#718174]">
               {compact
-                ? 'A snapshot of what you own'
-                : 'Values are reported in IDR'}
+                ? "A snapshot of what you own"
+                : "Values are reported in IDR"}
             </p>
           </div>
           {compact && <ArrowUpRight className="text-[#678072]" size={18} />}
@@ -567,9 +613,9 @@ function AssetTable({
           {rows.map(({ asset, value }) => {
             const quote = quoteFor(asset, market);
             const amount =
-              asset.type === 'gold'
+              asset.type === "gold"
                 ? `${formatNumber(asset.quantity ?? 0)} g`
-                : asset.type === 'stock'
+                : asset.type === "stock"
                   ? `${formatNumber(asset.quantity ?? 0)} shares`
                   : formatMoney(asset.value ?? 0, asset.currency);
             return (
@@ -593,26 +639,26 @@ function AssetTable({
                     )}
                   </div>
                   <p className="mt-0.5 truncate text-xs text-[#718174]">
-                    {asset.type === 'stock'
+                    {asset.type === "stock"
                       ? `${asset.symbol} · ${amount}`
                       : amount}
-                    {quote && (asset.type === 'stock' || asset.type === 'gold')
-                      ? ` · ${formatMoney(quote.price, quote.currency)}${asset.type === 'gold' ? '/g' : ''}`
-                      : ''}
+                    {quote && (asset.type === "stock" || asset.type === "gold")
+                      ? ` · ${formatMoney(quote.price, quote.currency)}${asset.type === "gold" ? "/g" : ""}`
+                      : ""}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold tracking-tight">
-                    {value ? formatIDR(value) : '—'}
+                    {value ? formatIDR(value) : "—"}
                   </p>
                   <p className="mt-0.5 text-xs text-[#718174]">
                     {value && total
                       ? `${((value / total) * 100).toFixed(1)}%`
                       : quote
-                        ? 'Awaiting FX'
-                        : asset.type === 'cash' && asset.currency === 'IDR'
-                          ? 'Manual value'
-                          : 'Price unavailable'}
+                        ? "Awaiting FX"
+                        : asset.type === "cash" && asset.currency === "IDR"
+                          ? "Manual value"
+                          : "Price unavailable"}
                   </p>
                 </div>
                 <DropdownMenu>
@@ -658,20 +704,23 @@ function AssetTable({
   );
 }
 
-type DashboardView = 'overview' | 'assets';
+type DashboardView = "overview" | "assets";
 
 export function Dashboard({ view }: { view: DashboardView }) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [market, setMarket] = useState<MarketData>(emptyMarket);
   const [hydrated, setHydrated] = useState(false);
-  const [allocationView, setAllocationView] = useState<'asset' | 'category'>(
-    'asset',
+  const [allocationView, setAllocationView] = useState<"asset" | "category">(
+    "asset",
   );
   const [editing, setEditing] = useState<Asset | undefined>();
   const [formOpen, setFormOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<PortfolioBackup>();
+  const [importError, setImportError] = useState<string>();
   const [themeMounted, setThemeMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const assetsRef = useRef(assets);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const activeTheme = themeMounted ? resolvedTheme : undefined;
   useEffect(() => {
@@ -679,7 +728,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
   }, []);
   useEffect(() => {
     try {
-      setAssets(JSON.parse(localStorage.getItem(ASSET_KEY) || '[]'));
+      setAssets(JSON.parse(localStorage.getItem(ASSET_KEY) || "[]"));
       setMarket(
         JSON.parse(
           localStorage.getItem(MARKET_KEY) || JSON.stringify(emptyMarket),
@@ -705,20 +754,20 @@ export function Dashboard({ view }: { view: DashboardView }) {
     const lifecycle = new AbortController();
     const register = context.registerTool(
       {
-        name: 'add_portfolio_asset',
-        title: 'Add portfolio asset',
+        name: "add_portfolio_asset",
+        title: "Add portfolio asset",
         description:
-          'Add a stock, gold holding, cash balance, or custom asset to this device-local portfolio.',
+          "Add a stock, gold holding, cash balance, or custom asset to this device-local portfolio.",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            type: { enum: ['stock', 'gold', 'cash', 'custom'] },
-            name: { type: 'string' },
-            currency: { enum: ['IDR', 'USD'] },
-            amount: { type: 'number', exclusiveMinimum: 0 },
-            symbol: { type: 'string' },
+            type: { enum: ["stock", "gold", "cash", "custom"] },
+            name: { type: "string" },
+            currency: { enum: ["IDR", "USD"] },
+            amount: { type: "number", exclusiveMinimum: 0 },
+            symbol: { type: "string" },
           },
-          required: ['type', 'name', 'currency', 'amount'],
+          required: ["type", "name", "currency", "amount"],
           additionalProperties: false,
         },
         annotations: { readOnlyHint: false, untrustedContentHint: false },
@@ -736,24 +785,24 @@ export function Dashboard({ view }: { view: DashboardView }) {
             !value.currency ||
             !Number.isFinite(value.amount) ||
             value.amount! <= 0 ||
-            (value.type === 'stock' && !value.symbol?.trim())
+            (value.type === "stock" && !value.symbol?.trim())
           )
             throw new Error(
-              'Provide a valid asset type, name, currency, positive amount, and a symbol for stocks.',
+              "Provide a valid asset type, name, currency, positive amount, and a symbol for stocks.",
             );
           const asset: Asset = {
             id: crypto.randomUUID(),
             type: value.type,
             name: value.name.trim(),
-            currency: value.type === 'gold' ? 'IDR' : value.currency,
-            ...(value.type === 'stock'
+            currency: value.type === "gold" ? "IDR" : value.currency,
+            ...(value.type === "stock"
               ? {
                   symbol: value.symbol!.trim().toUpperCase(),
                   quantity: value.amount,
                 }
               : {}),
-            ...(value.type === 'gold' ? { quantity: value.amount } : {}),
-            ...(value.type === 'cash' || value.type === 'custom'
+            ...(value.type === "gold" ? { quantity: value.amount } : {}),
+            ...(value.type === "cash" || value.type === "custom"
               ? { value: value.amount }
               : {}),
           };
@@ -772,7 +821,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
     return () => lifecycle.abort();
   }, []);
   const marketQuery = useQuery({
-    queryKey: ['market-data', assets],
+    queryKey: ["market-data", assets],
     queryFn: () => fetchMarketData(assets),
     enabled: hydrated && assets.length > 0,
   });
@@ -827,6 +876,51 @@ export function Dashboard({ view }: { view: DashboardView }) {
     setEditing(asset);
     setFormOpen(true);
   }
+  function exportPortfolio() {
+    const backup: PortfolioBackup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      assets,
+      market,
+    };
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(backup, null, 2)], {
+        type: "application/json",
+      }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `portfolio-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+  function chooseImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    void file
+      .text()
+      .then((text) => {
+        setImportError(undefined);
+        setPendingImport(parsePortfolioBackup(JSON.parse(text)));
+      })
+      .catch((error: unknown) => {
+        setPendingImport(undefined);
+        setImportError(
+          error instanceof Error
+            ? error.message
+            : "Could not read that portfolio backup.",
+        );
+      });
+  }
+  function confirmImport() {
+    if (!pendingImport) return;
+    setAssets(pendingImport.assets);
+    setMarket(pendingImport.market ?? emptyMarket);
+    setPendingImport(undefined);
+  }
   const assetChartData = assetRows
     .filter((row) => row.value > 0)
     .map((row, index) => ({
@@ -834,16 +928,16 @@ export function Dashboard({ view }: { view: DashboardView }) {
       value: row.value,
       color: colors[index % colors.length],
     }));
-  const categoryChartData = (['stock', 'gold', 'cash', 'custom'] as AssetType[])
+  const categoryChartData = (["stock", "gold", "cash", "custom"] as AssetType[])
     .map((type, index) => ({
       name:
-        type === 'stock'
-          ? 'Stocks & ETFs'
-          : type === 'gold'
-            ? 'Gold'
-            : type === 'cash'
-              ? 'Cash & bank'
-              : 'Custom assets',
+        type === "stock"
+          ? "Stocks & ETFs"
+          : type === "gold"
+            ? "Gold"
+            : type === "cash"
+              ? "Cash & bank"
+              : "Custom assets",
       value: assetRows
         .filter((row) => row.asset.type === type)
         .reduce((sum, row) => sum + row.value, 0),
@@ -851,26 +945,26 @@ export function Dashboard({ view }: { view: DashboardView }) {
     }))
     .filter((item) => item.value > 0);
   const chartData =
-    allocationView === 'asset' ? assetChartData : categoryChartData;
+    allocationView === "asset" ? assetChartData : categoryChartData;
   const summary = [
     {
-      label: 'Invested assets',
+      label: "Invested assets",
       value: assets
-        .filter((asset) => asset.type === 'stock' || asset.type === 'gold')
+        .filter((asset) => asset.type === "stock" || asset.type === "gold")
         .reduce((sum, asset) => sum + assetValue(asset, market), 0),
       icon: TrendingUp,
     },
     {
-      label: 'Cash & deposits',
+      label: "Cash & deposits",
       value: assets
-        .filter((asset) => asset.type === 'cash')
+        .filter((asset) => asset.type === "cash")
         .reduce((sum, asset) => sum + assetValue(asset, market), 0),
       icon: WalletCards,
     },
     {
-      label: 'Other assets',
+      label: "Other assets",
       value: assets
-        .filter((asset) => asset.type === 'custom')
+        .filter((asset) => asset.type === "custom")
         .reduce((sum, asset) => sum + assetValue(asset, market), 0),
       icon: BriefcaseBusiness,
     },
@@ -880,7 +974,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
       <AppSidebar
         activeView={view}
         onNavigate={(nextView) =>
-          router.push(nextView === 'assets' ? '/assets' : '/overview')
+          router.push(nextView === "assets" ? "/assets" : "/overview")
         }
       />
       <SidebarInset>
@@ -895,7 +989,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    {view === 'overview' ? 'Portfolio overview' : 'All assets'}
+                    {view === "overview" ? "Portfolio overview" : "All assets"}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -904,12 +998,51 @@ export function Dashboard({ view }: { view: DashboardView }) {
               variant="ghost"
               size="icon-sm"
               className="ml-auto"
-              aria-label={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}
-              title={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}
-              onClick={() => setTheme(activeTheme === 'dark' ? 'light' : 'dark')}
+              aria-label={`Switch to ${activeTheme === "dark" ? "light" : "dark"} mode`}
+              title={`Switch to ${activeTheme === "dark" ? "light" : "dark"} mode`}
+              onClick={() =>
+                setTheme(activeTheme === "dark" ? "light" : "dark")
+              }
             >
-              {activeTheme === 'dark' ? <Sun /> : <Moon />}
+              {activeTheme === "dark" ? <Sun /> : <Moon />}
             </Button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              onChange={chooseImport}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Portfolio settings"
+                    title="Portfolio settings"
+                  >
+                    <Settings />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-nowrap"
+                  onClick={() => importInputRef.current?.click()}
+                >
+                  <Upload />
+                  Import assets
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-nowrap"
+                  onClick={exportPortfolio}
+                >
+                  <Download />
+                  Export assets
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
             <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -929,11 +1062,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div id="market-data" className="text-sm text-[#678072]">
                   <span
-                    className={`mr-2 inline-block h-2 w-2 rounded-full ${allStale ? 'bg-amber-400' : hasPrices ? 'bg-emerald-500' : 'bg-[#a9b7ae]'}`}
+                    className={`mr-2 inline-block h-2 w-2 rounded-full ${allStale ? "bg-amber-400" : hasPrices ? "bg-emerald-500" : "bg-[#a9b7ae]"}`}
                   />
                   {hasPrices
-                    ? `${allStale ? 'Using last known prices · ' : 'Market data · '}${timeLabel(updatedAt)}`
-                    : 'Add an asset to load market data'}
+                    ? `${allStale ? "Using last known prices · " : "Market data · "}${timeLabel(updatedAt)}`
+                    : "Add an asset to load market data"}
                 </div>
                 <Button
                   variant="outline"
@@ -942,7 +1075,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   className="border-[#dce5de] bg-white"
                 >
                   <RefreshCw
-                    className={marketQuery.isFetching ? 'animate-spin' : ''}
+                    className={marketQuery.isFetching ? "animate-spin" : ""}
                   />
                   Refresh prices
                 </Button>
@@ -955,6 +1088,11 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 </Button>
               </div>
             </header>
+            {importError && (
+              <p role="alert" className="-mt-5 mb-5 text-sm text-destructive">
+                {importError}
+              </p>
+            )}
             {assets.length === 0 ? (
               <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
                 <CardContent className="flex min-h-[470px] flex-col items-center justify-center px-6 text-center">
@@ -980,7 +1118,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   </p>
                 </CardContent>
               </Card>
-            ) : view === 'assets' ? (
+            ) : view === "assets" ? (
               <AssetTable
                 rows={assetRows}
                 total={total}
@@ -1001,13 +1139,13 @@ export function Dashboard({ view }: { view: DashboardView }) {
                       </p>
                       <p className="mt-3 text-sm text-[#d1ddc8]">
                         {market.usdIdr
-                          ? `${market.usdIdr.isStale ? 'Last known USD/IDR' : 'USD/IDR'} | USD 1 = ${formatIDR(market.usdIdr.price)}`
-                          : 'USD/IDR rate unavailable'}
+                          ? `${market.usdIdr.isStale ? "Last known USD/IDR" : "USD/IDR"} | USD 1 = ${formatIDR(market.usdIdr.price)}`
+                          : "USD/IDR rate unavailable"}
                       </p>
                       <p className="mt-4 flex items-center gap-1.5 text-sm text-[#d1ddc8]">
                         <ShieldCheck size={16} />
-                        Calculated from {assets.length}{' '}
-                        {assets.length === 1 ? 'asset' : 'assets'}
+                        Calculated from {assets.length}{" "}
+                        {assets.length === 1 ? "asset" : "assets"}
                       </p>
                     </div>
                     <Button
@@ -1055,20 +1193,21 @@ export function Dashboard({ view }: { view: DashboardView }) {
                         <div>
                           <h2 className="font-semibold">Allocation</h2>
                           <p className="mt-1 text-sm text-[#718174]">
-                            {allocationView === 'asset'
-                              ? 'Portfolio weight by asset'
-                              : 'Portfolio weight by category'}
+                            {allocationView === "asset"
+                              ? "Portfolio weight by asset"
+                              : "Portfolio weight by category"}
                           </p>
                           <div className="mt-3 w-40">
-                            <Label htmlFor="allocation-filter" className="sr-only">
+                            <Label
+                              htmlFor="allocation-filter"
+                              className="sr-only"
+                            >
                               Group allocation by
                             </Label>
                             <Select
                               value={allocationView}
                               onValueChange={(value) =>
-                                setAllocationView(
-                                  value as 'asset' | 'category',
-                                )
+                                setAllocationView(value as "asset" | "category")
                               }
                             >
                               <SelectTrigger
@@ -1078,7 +1217,7 @@ export function Dashboard({ view }: { view: DashboardView }) {
                                 <SelectValue>
                                   {(value) =>
                                     allocationViewLabels[
-                                      value as 'asset' | 'category'
+                                      value as "asset" | "category"
                                     ]
                                   }
                                 </SelectValue>
@@ -1090,7 +1229,9 @@ export function Dashboard({ view }: { view: DashboardView }) {
                                 alignItemWithTrigger={false}
                               >
                                 <SelectItem value="asset">Asset</SelectItem>
-                                <SelectItem value="category">Category</SelectItem>
+                                <SelectItem value="category">
+                                  Category
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1127,8 +1268,8 @@ export function Dashboard({ view }: { view: DashboardView }) {
                                   wrapperStyle={{ zIndex: 20 }}
                                   contentStyle={{
                                     borderRadius: 12,
-                                    border: '1px solid #dce5de',
-                                    boxShadow: 'none',
+                                    border: "1px solid #dce5de",
+                                    boxShadow: "none",
                                   }}
                                 />
                               </PieChart>
@@ -1139,9 +1280,9 @@ export function Dashboard({ view }: { view: DashboardView }) {
                                   {chartData.length}
                                 </p>
                                 <p className="text-xs text-[#718174]">
-                                  {allocationView === 'asset'
-                                    ? 'assets'
-                                    : 'categories'}
+                                  {allocationView === "asset"
+                                    ? "assets"
+                                    : "categories"}
                                 </p>
                               </div>
                             </div>
@@ -1190,12 +1331,12 @@ export function Dashboard({ view }: { view: DashboardView }) {
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? 'Edit asset' : 'Add an asset'}
+                  {editing ? "Edit asset" : "Add an asset"}
                 </DialogTitle>
                 <DialogDescription>
                   {editing
-                    ? 'Update the details stored on this device.'
-                    : 'Enter a holding, balance, or manually valued asset.'}
+                    ? "Update the details stored on this device."
+                    : "Enter a holding, balance, or manually valued asset."}
                 </DialogDescription>
               </DialogHeader>
               <AssetForm
@@ -1203,6 +1344,40 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 onSave={saveAsset}
                 onClose={() => setFormOpen(false)}
               />
+            </DialogContent>
+          </Dialog>
+          <Dialog
+            open={Boolean(pendingImport)}
+            onOpenChange={(open) => {
+              if (!open) setPendingImport(undefined);
+            }}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Replace these assets?</DialogTitle>
+                <DialogDescription>
+                  This backup contains {pendingImport?.assets.length ?? 0}{" "}
+                  {pendingImport?.assets.length === 1 ? "asset" : "assets"}.
+                  Importing it will replace the assets currently stored on this
+                  device.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPendingImport(undefined)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmImport}
+                  className="bg-[#283f34] text-white hover:bg-[#1e3028]"
+                >
+                  Replace assets
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </main>
