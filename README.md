@@ -94,6 +94,7 @@ app/
     page.tsx                   # /overview route
   settings/
     components/
+      data-management-card.tsx
       language-card.tsx
       reporting-currency-card.tsx
     page.tsx                   # /settings route
@@ -121,7 +122,7 @@ The browser's local storage holds the portfolio, cached market data, and the
 reporting-currency and language preferences. Clearing browser site data clears the portfolio,
 unless it has been exported first.
 
-Use the gear menu in the top bar to export a JSON backup before changing
+Use the **Data** section in Settings to export a JSON backup before changing
 browsers, devices, or browser storage. Import replaces the current local
 portfolio after confirmation.
 

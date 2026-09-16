@@ -33,11 +33,12 @@
     "dark": "dark"
   },
   "settings": {
-    "portfolioSettings": "Portfolio settings",
     "reportingCurrency": "Reporting currency",
     "reportingCurrencyDescription": "Used for all dashboard values and price tooltips.",
     "language": "Language",
-    "languageDescription": "Used for all app text and labels."
+    "languageDescription": "Used for all app text and labels.",
+    "data": "Data",
+    "dataDescription": "Importing a backup replaces the assets stored on this device."
   },
   "currency": {
     "IDR": "Indonesian rupiah",

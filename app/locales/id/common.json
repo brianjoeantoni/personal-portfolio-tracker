@@ -33,11 +33,12 @@
     "dark": "gelap"
   },
   "settings": {
-    "portfolioSettings": "Pengaturan portofolio",
     "reportingCurrency": "Mata uang pelaporan",
     "reportingCurrencyDescription": "Digunakan untuk seluruh nilai dasbor dan tooltip harga.",
     "language": "Bahasa",
-    "languageDescription": "Digunakan untuk seluruh teks dan label aplikasi."
+    "languageDescription": "Digunakan untuk seluruh teks dan label aplikasi.",
+    "data": "Data",
+    "dataDescription": "Mengimpor cadangan akan mengganti aset yang tersimpan pada perangkat ini."
   },
   "currency": {
     "IDR": "Rupiah Indonesia",

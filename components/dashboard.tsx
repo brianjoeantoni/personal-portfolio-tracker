@@ -10,18 +10,15 @@ import {
   Banknote,
   BriefcaseBusiness,
   Coins,
-  Download,
   Landmark,
   MoreHorizontal,
   Pencil,
   Plus,
   RefreshCw,
-  Settings,
   Moon,
   Sun,
   Trash2,
   TrendingUp,
-  Upload,
   WalletCards,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -67,6 +64,7 @@ import { type AllocationView } from "@/app/overview/components/allocation-card";
 import { OverviewContent } from "@/app/overview/components/overview-content";
 import { ReportingCurrencyCard } from "@/app/settings/components/reporting-currency-card";
 import { LanguageCard } from "@/app/settings/components/language-card";
+import { DataManagementCard } from "@/app/settings/components/data-management-card";
 import { useLocale } from "@/components/locale-provider";
 import {
   Breadcrumb,
@@ -960,7 +958,6 @@ export function Dashboard({ view }: { view: DashboardView }) {
   const [themeMounted, setThemeMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const assetsRef = useRef(assets);
-  const importInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const activeTheme = themeMounted ? resolvedTheme : undefined;
   useEffect(() => {
@@ -1277,43 +1274,6 @@ export function Dashboard({ view }: { view: DashboardView }) {
             >
               {activeTheme === "dark" ? <Sun /> : <Moon />}
             </Button>
-            <input
-              ref={importInputRef}
-              type="file"
-              accept="application/json,.json"
-              className="sr-only"
-              onChange={chooseImport}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("settings.portfolioSettings")}
-                    title={t("settings.portfolioSettings")}
-                  >
-                    <Settings />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  className="text-nowrap"
-                  onClick={() => importInputRef.current?.click()}
-                >
-                  <Upload />
-                  {t("actions.importAssets")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-nowrap"
-                  onClick={exportPortfolio}
-                >
-                  <Download />
-                  {t("actions.exportAssets")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
           <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
             <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -1383,6 +1343,10 @@ export function Dashboard({ view }: { view: DashboardView }) {
                   onValueChange={setReportingCurrency}
                 />
                 <LanguageCard value={locale} onValueChange={setLocale} />
+                <DataManagementCard
+                  onImport={chooseImport}
+                  onExport={exportPortfolio}
+                />
               </div>
             ) : assets.length === 0 ? (
               <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
