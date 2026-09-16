@@ -79,30 +79,31 @@ app/
     yahoo-search/route.ts      # Proxies and filters Yahoo search results
   assets/
     page.tsx                   # /assets route
-    components/assets-page.tsx
   lib/
     currency.ts                # Currency registry, formatting, and conversion
   overview/
-    page.tsx                   # /overview route
     components/
-      dashboard.tsx            # Shared dashboard state and UI
-      overview-page.tsx
+      allocation-card.tsx      # Allocation filter and pie chart
+      overview-content.tsx     # Overview-specific layout
+    page.tsx                   # /overview route
   settings/
+    components/
+      reporting-currency-card.tsx
     page.tsx                   # /settings route
-    components/settings-page.tsx
   layout.tsx                   # Metadata, fonts, providers
   page.tsx                     # Redirect to /overview
 components/
   app-sidebar.tsx              # Main navigation
+  dashboard.tsx                # Shared state, shell, and reusable asset UI
   theme-provider.tsx           # next-themes wrapper
   ui/                          # Reusable UI primitives
 public/
   favicon.svg
 ```
 
-The three route wrappers use the same dashboard component so the portfolio,
-market data, theme controls, and import/export behavior stay consistent as the
-user moves between pages.
+The route pages render the same dashboard component with a different view name,
+so portfolio state, market data, theme controls, and import/export behavior
+stay consistent as the user moves between pages.
 
 ## Data and privacy
 

@@ -1,5 +1,5 @@
-import OverviewPage from './components/overview-page';
+import DashboardPage from '@/components/dashboard';
 
 export default function OverviewRoute() {
-  return <OverviewPage />;
+  return <DashboardPage view="overview" />;
 }

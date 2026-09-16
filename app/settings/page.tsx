@@ -1,5 +1,5 @@
-import SettingsPage from './components/settings-page';
+import DashboardPage from '@/components/dashboard';
 
 export default function SettingsRoute() {
-  return <SettingsPage />;
+  return <DashboardPage view="settings" />;
 }

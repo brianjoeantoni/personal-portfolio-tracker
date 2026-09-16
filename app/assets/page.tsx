@@ -1,5 +1,5 @@
-import AssetsPage from './components/assets-page';
+import DashboardPage from '@/components/dashboard';
 
 export default function AssetsRoute() {
-  return <AssetsPage />;
+  return <DashboardPage view="assets" />;
 }

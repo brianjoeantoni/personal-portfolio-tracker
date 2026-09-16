@@ -17,7 +17,6 @@ import {
   Plus,
   RefreshCw,
   Settings,
-  ShieldCheck,
   Moon,
   Sun,
   Trash2,
@@ -27,7 +26,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,6 +61,9 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { AppSidebar } from "@/components/app-sidebar";
+import { type AllocationView } from "@/app/overview/components/allocation-card";
+import { OverviewContent } from "@/app/overview/components/overview-content";
+import { ReportingCurrencyCard } from "@/app/settings/components/reporting-currency-card";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -89,7 +90,6 @@ import {
   isAssetCurrency,
   isReportingCurrency,
   idrRateFor,
-  reportingCurrencies,
   reportingCurrencyLabel,
   type Currency,
   type FxRates,
@@ -104,10 +104,6 @@ const assetTypeLabels: Record<AssetType, string> = {
   custom: "Custom asset",
 };
 
-const allocationViewLabels = {
-  asset: "Asset",
-  category: "Category",
-} as const;
 type Asset = {
   id: string;
   type: AssetType;
@@ -936,9 +932,8 @@ export function Dashboard({ view }: { view: DashboardView }) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [market, setMarket] = useState<MarketData>(emptyMarket);
   const [hydrated, setHydrated] = useState(false);
-  const [allocationView, setAllocationView] = useState<"asset" | "category">(
-    "asset",
-  );
+  const [allocationView, setAllocationView] =
+    useState<AllocationView>("asset");
   const [reportingCurrency, setReportingCurrency] =
     useState<Currency>(defaultReportingCurrency);
   const [reportingCurrencyReady, setReportingCurrencyReady] = useState(false);
@@ -1356,48 +1351,10 @@ export function Dashboard({ view }: { view: DashboardView }) {
             {!hydrated ? (
               <DashboardSkeleton view={view} />
             ) : view === "settings" ? (
-              <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
-                <CardContent className="p-0">
-                  <div className="flex items-center justify-between gap-6 px-6 py-5">
-                    <div>
-                      <Label
-                        htmlFor="reporting-currency"
-                        className="font-semibold"
-                      >
-                        Reporting currency
-                      </Label>
-                      <p className="mt-1 text-sm text-[#718174]">
-                        Used for all dashboard values and price tooltips.
-                      </p>
-                    </div>
-                    <Select
-                      value={reportingCurrency}
-                      onValueChange={(value) =>
-                        setReportingCurrency(value as Currency)
-                      }
-                    >
-                      <SelectTrigger
-                        id="reporting-currency"
-                        className="w-24 bg-[#eff3ed] dark:bg-[#273a2f]"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent
-                        side="bottom"
-                        sideOffset={6}
-                        align="start"
-                        alignItemWithTrigger={false}
-                      >
-                        {reportingCurrencies.map((currency) => (
-                          <SelectItem key={currency.code} value={currency.code}>
-                            {currency.code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+              <ReportingCurrencyCard
+                value={reportingCurrency}
+                onValueChange={setReportingCurrency}
+              />
             ) : assets.length === 0 ? (
               <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
                 <CardContent className="flex min-h-[470px] flex-col items-center justify-center px-6 text-center">
@@ -1433,66 +1390,16 @@ export function Dashboard({ view }: { view: DashboardView }) {
                 onDelete={deleteAsset}
               />
             ) : (
-              <div className="space-y-6">
-                <section className="overflow-hidden rounded-3xl bg-[#283f34] px-6 py-7 text-white shadow-[0_18px_45px_rgba(40,63,52,0.12)] sm:px-8 sm:py-9">
-                  <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
-                    <div>
-                      <p className="text-sm font-medium text-[#b6c6a9]">
-                        Total portfolio value
-                      </p>
-                      <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
-                        {formatReportingValue(
-                          total,
-                          reportingCurrency,
-                          market,
-                        )}
-                      </p>
-                      <p className="mt-3 text-sm text-[#d1ddc8]">
-                        {usdIdrQuote
-                          ? `${usdIdrQuote.isStale ? "Last known USD/IDR" : "USD/IDR"} | USD 1 = ${formatIDR(usdIdrQuote.price)}`
-                          : "USD/IDR rate unavailable"}
-                      </p>
-                      <p className="mt-4 flex items-center gap-1.5 text-sm text-[#d1ddc8]">
-                        <ShieldCheck size={16} />
-                        Calculated from {assets.length}{" "}
-                        {assets.length === 1 ? "asset" : "assets"}
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      onClick={openNew}
-                      className="bg-[#d7f268] text-[#22352a] hover:bg-[#c9e759]"
-                    >
-                      <Plus />
-                      Add asset
-                    </Button>
-                  </div>
-                </section>
-                <section className="grid gap-4 md:grid-cols-3">
-                  {summary.map((item) => (
-                    <Card
-                      key={item.label}
-                      className="dashboard-card border-[#dce5de] bg-white shadow-none"
-                    >
-                      <CardContent className="flex items-center gap-4 p-5">
-                        <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#eff3ed] text-[#486451]">
-                          <item.icon size={18} />
-                        </div>
-                        <div>
-                          <p className="text-sm text-[#718174]">{item.label}</p>
-                          <p className="mt-1 font-semibold tracking-tight">
-                            {formatReportingValue(
-                              item.value,
-                              reportingCurrency,
-                              market,
-                            )}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </section>
-                <section className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+              <OverviewContent
+                total={total}
+                assetCount={assets.length}
+                usdIdrRateLabel={
+                  usdIdrQuote
+                    ? `${usdIdrQuote.isStale ? "Last known USD/IDR" : "USD/IDR"} | USD 1 = ${formatIDR(usdIdrQuote.price)}`
+                    : "USD/IDR rate unavailable"
+                }
+                summary={summary}
+                assetSnapshot={
                   <AssetTable
                     rows={assetRows.slice(0, 5)}
                     total={total}
@@ -1502,142 +1409,16 @@ export function Dashboard({ view }: { view: DashboardView }) {
                     onDelete={deleteAsset}
                     compact
                   />
-                  <Card className="dashboard-card border-[#dce5de] bg-white shadow-none">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h2 className="font-semibold">Allocation</h2>
-                          <p className="mt-1 text-sm text-[#718174]">
-                            {allocationView === "asset"
-                              ? "Portfolio weight by asset"
-                              : "Portfolio weight by category"}
-                          </p>
-                          <div className="mt-3 w-40">
-                            <Label
-                              htmlFor="allocation-filter"
-                              className="sr-only"
-                            >
-                              Group allocation by
-                            </Label>
-                            <Select
-                              value={allocationView}
-                              onValueChange={(value) =>
-                                setAllocationView(value as "asset" | "category")
-                              }
-                            >
-                              <SelectTrigger
-                                id="allocation-filter"
-                                className="h-8 bg-[#eff3ed] text-xs dark:bg-[#273a2f]"
-                              >
-                                <SelectValue>
-                                  {(value) =>
-                                    allocationViewLabels[
-                                      value as "asset" | "category"
-                                    ]
-                                  }
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent
-                                side="bottom"
-                                sideOffset={6}
-                                align="start"
-                                alignItemWithTrigger={false}
-                              >
-                                <SelectItem value="asset">Asset</SelectItem>
-                                <SelectItem value="category">
-                                  Category
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <Badge
-                          variant="secondary"
-                          className="bg-[#eff3ed] text-[#486451] dark:bg-[#273a2f] dark:text-[#c8d9cb]"
-                        >
-                          {reportingCurrency}
-                        </Badge>
-                      </div>
-                      {chartData.length ? (
-                        <>
-                          <div className="relative mt-4 h-56">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={chartData}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  innerRadius={62}
-                                  outerRadius={88}
-                                  paddingAngle={3}
-                                  stroke="none"
-                                >
-                                  {chartData.map((entry) => (
-                                    <Cell key={entry.name} fill={entry.color} />
-                                  ))}
-                                </Pie>
-                                <Tooltip
-                                  formatter={(value) =>
-                                    formatReportingValue(
-                                      Number(value ?? 0),
-                                      reportingCurrency,
-                                      market,
-                                    )
-                                  }
-                                  wrapperStyle={{ zIndex: 20 }}
-                                  contentStyle={{
-                                    borderRadius: 12,
-                                    border: "1px solid #dce5de",
-                                    boxShadow: "none",
-                                  }}
-                                />
-                              </PieChart>
-                            </ResponsiveContainer>
-                            <div className="pointer-events-none absolute inset-0 z-0 grid place-items-center text-center">
-                              <div>
-                                <p className="text-2xl font-semibold tracking-tight">
-                                  {chartData.length}
-                                </p>
-                                <p className="text-xs text-[#718174]">
-                                  {allocationView === "asset"
-                                    ? "assets"
-                                    : "categories"}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="space-y-3">
-                            {chartData.slice(0, 5).map((item) => (
-                              <div
-                                key={item.name}
-                                className="flex items-center justify-between text-sm"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className="h-2.5 w-2.5 rounded-full"
-                                    style={{ background: item.color }}
-                                  />
-                                  <span className="max-w-36 truncate text-[#405246]">
-                                    {item.name}
-                                  </span>
-                                </div>
-                                <span className="font-medium">
-                                  {((item.value / total) * 100).toFixed(1)}%
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <div className="grid h-72 place-items-center text-center text-sm text-[#718174]">
-                          Live values will appear after a successful price
-                          refresh.
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </section>
-              </div>
+                }
+                allocationView={allocationView}
+                onAllocationViewChange={setAllocationView}
+                allocationData={chartData}
+                reportingCurrency={reportingCurrency}
+                formatValue={(value) =>
+                  formatReportingValue(value, reportingCurrency, market)
+                }
+                onAddAsset={openNew}
+              />
             )}
           </div>
           <Dialog
